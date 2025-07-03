@@ -38,7 +38,7 @@ public class DatabaseConfig {
                 .dataSource(dataSource)
                 .packages("com.pipebank.ordersystem.domain.web")  // Web 엔티티 패키지
                 .persistenceUnit("web")
-                .properties(jpaProperties())
+                .properties(webJpaProperties())
                 .build();
     }
 
@@ -64,7 +64,7 @@ public class DatabaseConfig {
                 .dataSource(dataSource)
                 .packages("com.pipebank.ordersystem.domain.erp")  // ERP 엔티티 패키지
                 .persistenceUnit("erp")
-                .properties(jpaProperties())
+                .properties(erpJpaProperties())
                 .build();
     }
 
@@ -74,10 +74,20 @@ public class DatabaseConfig {
         return new JpaTransactionManager(entityManagerFactory);
     }
 
-    // JPA 속성 설정
-    private java.util.Map<String, Object> jpaProperties() {
+    // WEB DB JPA 속성 설정
+    private java.util.Map<String, Object> webJpaProperties() {
         java.util.Map<String, Object> props = new java.util.HashMap<>();
-        props.put("hibernate.hbm2ddl.auto", "update");
+        props.put("hibernate.hbm2ddl.auto", "update");  // Web DB는 자유롭게 수정 가능
+        props.put("hibernate.show_sql", "true");
+        props.put("hibernate.format_sql", "true");
+        props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
+        return props;
+    }
+
+    // ERP DB JPA 속성 설정 (안전하게)
+    private java.util.Map<String, Object> erpJpaProperties() {
+        java.util.Map<String, Object> props = new java.util.HashMap<>();
+        props.put("hibernate.hbm2ddl.auto", "validate");  // ERP DB는 검증만, 변경 안함
         props.put("hibernate.show_sql", "true");
         props.put("hibernate.format_sql", "true");
         props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
