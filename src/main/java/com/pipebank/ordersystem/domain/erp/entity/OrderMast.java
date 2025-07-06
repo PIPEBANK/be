@@ -20,15 +20,15 @@ public class OrderMast {
 
     @Id
     @Column(name = "ORDER_MAST_DATE", columnDefinition = "char(8)", nullable = false)
-    private String orderMastDate;
+    private String orderMastDate; //주문일자
 
     @Id
     @Column(name = "ORDER_MAST_SOSOK", columnDefinition = "int(10)", nullable = false)
-    private Integer orderMastSosok;
+    private Integer orderMastSosok; //소속
 
     @Id
     @Column(name = "ORDER_MAST_UJCD", columnDefinition = "char(10)", nullable = false)
-    private String orderMastUjcd;
+    private String orderMastUjcd; //업장
 
     @Id
     @Column(name = "ORDER_MAST_ACNO", columnDefinition = "int(10)", nullable = false)
@@ -41,19 +41,19 @@ public class OrderMast {
     private Integer orderMastScust;   //매출 거래처
 
     @Column(name = "ORDER_MAST_SAWON", columnDefinition = "int(10)", nullable = false)
-    private Integer orderMastSawon;
+    private Integer orderMastSawon; //담당자
 
     @Column(name = "ORDER_MAST_SAWON_BUSE", columnDefinition = "int(11)", nullable = false)
-    private Integer orderMastSawonBuse;
+    private Integer orderMastSawonBuse; //담당자부서
 
     @Column(name = "ORDER_MAST_ODATE", columnDefinition = "char(8)", nullable = false)
-    private String orderMastOdate;
+    private String orderMastOdate;  // 납기일자
 
     @Column(name = "ORDER_MAST_PROJECT", columnDefinition = "int(10)", nullable = false)
-    private Integer orderMastProject;
+    private Integer orderMastProject;  //프로젝트
 
     @Column(name = "ORDER_MAST_REMARK", nullable = false, length = 2000)
-    private String orderMastRemark;
+    private String orderMastRemark;  //비고
 
     @Column(name = "ORDER_MAST_FDATE", nullable = false)
     private LocalDateTime orderMastFdate;
@@ -68,43 +68,43 @@ public class OrderMast {
     private String orderMastLuser;
 
     @Column(name = "ORDER_MAST_COMADDR1", nullable = true, length = 100)
-    private String orderMastComaddr1;
+    private String orderMastComaddr1;  // 납품현장 기본주소
 
     @Column(name = "ORDER_MAST_COMADDR2", nullable = true, length = 100)
-    private String orderMastComaddr2;
+    private String orderMastComaddr2; // 납품현장 상세주소
 
     @Column(name = "ORDER_MAST_COMNAME", nullable = true, length = 100)
-    private String orderMastComname;
+    private String orderMastComname;  // 현장명
 
     @Column(name = "ORDER_MAST_COMUNAME", nullable = true, length = 50)
-    private String orderMastComuname;
+    private String orderMastComuname; //인수자
 
     @Column(name = "ORDER_MAST_COMUTEL", nullable = true, length = 30)
-    private String orderMastComutel;
+    private String orderMastComutel;  //인수자연락처
 
     @Column(name = "ORDER_MAST_REASON", columnDefinition = "char(10)", nullable = true)
-    private String orderMastReason;
+    private String orderMastReason;  // 용도구분 (코드관리테이블)
 
     @Column(name = "ORDER_MAST_TCOMDIV", columnDefinition = "char(10)", nullable = true)
-    private String orderMastTcomdiv;
+    private String orderMastTcomdiv;  //운송구분 (코드관리테이블)
 
     @Column(name = "ORDER_MAST_CURRENCY", columnDefinition = "char(10)", nullable = true)
-    private String orderMastCurrency;
+    private String orderMastCurrency; //화폐코드 (코드관리테이블)
 
     @Column(name = "ORDER_MAST_CURRENCY_PER", nullable = true, length = 20)
-    private String orderMastCurrencyPer;
+    private String orderMastCurrencyPer; //환율
 
     @Column(name = "ORDER_MAST_SDIV", columnDefinition = "char(10)", nullable = true)
-    private String orderMastSdiv;
+    private String orderMastSdiv; // 출고형태코드 (코드관리테이블)
 
     @Column(name = "ORDER_MAST_DCUST", nullable = true, length = 200)
-    private String orderMastDcust;
+    private String orderMastDcust; // 수요처
 
     @Column(name = "ORDER_MAST_INTYPE", columnDefinition = "char(10)", nullable = true)
-    private String orderMastIntype;
+    private String orderMastIntype;  // 등록구분 (코드관리테이블)
 
     @Column(name = "ORDER_MAST_OTIME", columnDefinition = "char(2)", nullable = false)
-    private String orderMastOtime;
+    private String orderMastOtime;  //납기시간
 
     @Builder
     public OrderMast(String orderMastDate, Integer orderMastSosok, String orderMastUjcd, Integer orderMastAcno,
