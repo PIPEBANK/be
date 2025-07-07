@@ -11,7 +11,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 /**
  * 품목 코드 엔티티
@@ -21,7 +20,6 @@ import lombok.ToString;
 @Table(name = "co_item_code")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
 public class ItemCode {
 
     @Id

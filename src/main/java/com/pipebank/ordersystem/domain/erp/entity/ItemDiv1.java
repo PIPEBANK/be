@@ -9,7 +9,6 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 /**
  * 품목 제품종류 코드 엔티티 (DIV1)
@@ -20,7 +19,6 @@ import lombok.ToString;
 @Table(name = "co_item_div1")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
 public class ItemDiv1 {
 
     @Id

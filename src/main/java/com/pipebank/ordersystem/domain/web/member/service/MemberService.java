@@ -17,6 +17,7 @@ import com.pipebank.ordersystem.domain.web.member.dto.PasswordChangeRequest;
 import com.pipebank.ordersystem.domain.web.member.entity.Member;
 import com.pipebank.ordersystem.domain.web.member.entity.MemberRole;
 import com.pipebank.ordersystem.domain.web.member.repository.MemberRepository;
+import com.pipebank.ordersystem.domain.erp.repository.CustomerRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -69,7 +71,7 @@ public class MemberService {
     public MemberResponse getMember(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다: " + memberId));
-        return MemberResponse.from(member);
+        return convertToResponseWithCustName(member);
     }
 
     /**
@@ -79,7 +81,7 @@ public class MemberService {
     public MemberResponse getMemberByMemberId(String memberId) {
         Member member = memberRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원 ID입니다: " + memberId));
-        return MemberResponse.from(member);
+        return convertToResponseWithCustName(member);
     }
 
     /**
@@ -88,7 +90,7 @@ public class MemberService {
     public MemberResponse getActiveMember(String memberId) {
         Member member = memberRepository.findByMemberIdAndUseYn(memberId, true)
                 .orElseThrow(() -> new IllegalArgumentException("활성화된 회원을 찾을 수 없습니다: " + memberId));
-        return MemberResponse.from(member);
+        return convertToResponseWithCustName(member);
     }
 
     /**
@@ -97,7 +99,7 @@ public class MemberService {
     @Cacheable(value = "memberList")
     public Page<MemberResponse> getMembers(Pageable pageable) {
         return memberRepository.findAll(pageable)
-                .map(MemberResponse::from);
+                .map(this::convertToResponseWithCustName);
     }
 
     /**
@@ -142,7 +144,7 @@ public class MemberService {
         }
 
         log.info("회원 정보 수정 완료 - ID: {}", member.getMemberId());
-        return MemberResponse.from(member);
+        return convertToResponseWithCustName(member);
     }
 
     /**
@@ -217,5 +219,36 @@ public class MemberService {
 
     public long getActiveMemberCountByCustCode(String custCode) {
         return memberRepository.countActiveMembersByCustCode(custCode);
+    }
+
+    /**
+     * Member를 MemberResponse로 변환하면서 거래처 정보 매핑
+     */
+    private MemberResponse convertToResponseWithCustName(Member member) {
+        MemberResponse response = MemberResponse.from(member);
+        
+        // custCode가 숫자인 경우 Customer 테이블에서 거래처 정보 조회
+        if (member.getCustCode() != null && !member.getCustCode().trim().isEmpty()) {
+            try {
+                Integer custCodeInt = Integer.parseInt(member.getCustCode());
+                customerRepository.findById(custCodeInt)
+                        .ifPresentOrElse(
+                            customer -> {
+                                response.setCustCodeName(customer.getCustCodeName());
+                                response.setCustCodeSano(customer.getCustCodeSano());
+                                response.setCustCodeUname1(customer.getCustCodeUname1());
+                                response.setCustCodeUtel1(customer.getCustCodeUtel1());
+                                response.setCustCodeAddr(customer.getCustCodeAddr());
+                                response.setCustCodeEmail(customer.getCustCodeEmail());
+                            },
+                            () -> response.setCustCodeName("거래처 정보 없음")
+                        );
+            } catch (NumberFormatException e) {
+                log.warn("custCode가 숫자가 아닙니다: {}", member.getCustCode());
+                response.setCustCodeName("잘못된 거래처 코드");
+            }
+        }
+        
+        return response;
     }
 } 

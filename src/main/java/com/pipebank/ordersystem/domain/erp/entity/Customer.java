@@ -118,58 +118,58 @@ public class Customer {
     private String custCodeLocal; //지역코드 (코드관리테이블)
 
     @Column(name = "CUST_CODE_USE_ACC", nullable = false, columnDefinition = "tinyint(3)")
-    private Integer custCodeUseAcc;
+    private Integer custCodeUseAcc; //회계사용 유무
 
     @Column(name = "CUST_CODE_USE_PUR", nullable = false, columnDefinition = "tinyint(3)")
-    private Integer custCodeUsePur;
+    private Integer custCodeUsePur; //구매사용 유무
 
     @Column(name = "CUST_CODE_USE_POS", nullable = false, columnDefinition = "tinyint(3)")
-    private Integer custCodeUsePos;
+    private Integer custCodeUsePos; //업장사용 유무
 
     @Column(name = "CUST_CODE_BUBIN", nullable = false, length = 14)
-    private String custCodeBubin;
+    private String custCodeBubin;  // 법인[주민]번호
 
     @Column(name = "CUST_CODE_OCUST", nullable = false, columnDefinition = "int(10)")
-    private Integer custCodeOcust;
+    private Integer custCodeOcust; // 원거래처
 
     @Column(name = "CUST_CODE_TDIV", nullable = false, columnDefinition = "char(10)")
-    private String custCodeTdiv;
+    private String custCodeTdiv;  //납품시점 (코드관리테이블)
 
     @Column(name = "CUST_CODE_LIMIT", nullable = false, precision = 18, scale = 0)
-    private BigDecimal custCodeLimit;
+    private BigDecimal custCodeLimit; //외상한도
 
     @Column(name = "CUST_CODE_SDATE", nullable = false, columnDefinition = "char(8)")
-    private String custCodeSdate;
+    private String custCodeSdate;  //최초거래일
 
     @Column(name = "CUST_CODE_EDATE", nullable = false, columnDefinition = "char(8)")
-    private String custCodeEdate;
+    private String custCodeEdate;  //최종거래일
 
     @Column(name = "CUST_CODE_PDATE", nullable = false, columnDefinition = "char(8)")
-    private String custCodePdate;
+    private String custCodePdate;  //최종결재일
 
     @Column(name = "CUST_CODE_MCHARGE", nullable = false, precision = 18, scale = 0)
-    private BigDecimal custCodeMcharge;
+    private BigDecimal custCodeMcharge;  //월매출[마감]
 
     @Column(name = "CUST_CODE_PTYPE", nullable = true, columnDefinition = "char(10)")
-    private String custCodePtype;
+    private String custCodePtype; //거래처요금정책 (코드관리테이블)
 
     @Column(name = "CUST_CODE_WELD_AGENT", nullable = true, columnDefinition = "int(11)")
-    private Integer custCodeWeldAgent;
+    private Integer custCodeWeldAgent; //융착기 대리점단가
 
     @Column(name = "CUST_CODE_REMARK", nullable = false, length = 1000)
-    private String custCodeRemark;
+    private String custCodeRemark; //비고
 
     @Column(name = "CUST_CODE_FDATE", nullable = false)
-    private LocalDateTime custCodeFdate;
+    private LocalDateTime custCodeFdate; //최초등록일
 
     @Column(name = "CUST_CODE_FUSER", nullable = false, length = 20)
-    private String custCodeFuser;
+    private String custCodeFuser; //최초등록자
 
     @Column(name = "CUST_CODE_LDATE", nullable = false)
-    private LocalDateTime custCodeLdate;
+    private LocalDateTime custCodeLdate; //최종수정일
 
     @Column(name = "CUST_CODE_LUSER", nullable = false, length = 20)
-    private String custCodeLuser;
+    private String custCodeLuser; //최종수정자
 
     @Builder
     public Customer(String custCodeNum, String custCodeDcod, String custCodeName, String custCodeWord,
