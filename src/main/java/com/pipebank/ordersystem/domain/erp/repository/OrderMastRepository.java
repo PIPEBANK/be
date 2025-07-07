@@ -117,4 +117,23 @@ public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.
     @Query("SELECT o FROM OrderMast o WHERE o.orderMastSawon = :sawonId " +
            "ORDER BY o.orderMastDate DESC, o.orderMastSosok ASC, o.orderMastUjcd ASC, o.orderMastAcno ASC")
     List<OrderMast> findLatestOrdersBySawon(@Param("sawonId") Integer sawonId, Pageable pageable);
+
+    // 거래처별 주문 조회 (필터링)
+    @Query("SELECT o FROM OrderMast o WHERE o.orderMastCust = :custId AND " +
+           "(:orderDate IS NULL OR o.orderMastDate = :orderDate) AND " +
+           "(:startDate IS NULL OR o.orderMastDate >= :startDate) AND " +
+           "(:endDate IS NULL OR o.orderMastDate <= :endDate) AND " +
+           "(:orderNumber IS NULL OR CONCAT(o.orderMastDate, '-', o.orderMastAcno) LIKE %:orderNumber%) AND " +
+           "(:sdiv IS NULL OR o.orderMastSdiv = :sdiv) AND " +
+           "(:comName IS NULL OR o.orderMastComname LIKE %:comName%) " +
+           "ORDER BY o.orderMastDate DESC, o.orderMastSosok ASC, o.orderMastUjcd ASC, o.orderMastAcno ASC")
+    Page<OrderMast> findByCustomerWithFilters(
+            @Param("custId") Integer custId,
+            @Param("orderDate") String orderDate,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate,
+            @Param("orderNumber") String orderNumber,
+            @Param("sdiv") String sdiv,
+            @Param("comName") String comName,
+            Pageable pageable);
 } 

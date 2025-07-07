@@ -1,6 +1,7 @@
 package com.pipebank.ordersystem.domain.erp.service;
 
 import com.pipebank.ordersystem.domain.erp.dto.OrderMastResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderMastListResponse;
 import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
 import com.pipebank.ordersystem.domain.erp.repository.OrderMastRepository;
 import lombok.RequiredArgsConstructor;
@@ -112,6 +113,42 @@ public class OrderMastService {
         Page<OrderMastResponse> responses = orders.map(this::convertToResponse);
         
         log.info("거래처별 주문 목록 조회 완료 (페이징) - 총 {}건", responses.getTotalElements());
+        return responses;
+    }
+
+    /**
+     * 거래처별 주문 목록 조회 (페이징 + 필터링)
+     */
+    public Page<OrderMastResponse> getOrdersByCustomerWithFilters(Integer custId, String orderDate, 
+                                                                 String startDate, String endDate,
+                                                                 String orderNumber, String sdiv, String comName, 
+                                                                 Pageable pageable) {
+        log.info("거래처별 주문 목록 조회 요청 (필터링) - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
+                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName);
+        
+        Page<OrderMast> orders = orderMastRepository.findByCustomerWithFilters(
+                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
+        Page<OrderMastResponse> responses = orders.map(this::convertToResponse);
+        
+        log.info("거래처별 주문 목록 조회 완료 (필터링) - 총 {}건", responses.getTotalElements());
+        return responses;
+    }
+
+    /**
+     * 거래처별 주문 목록 조회 (페이징 + 필터링) - 성능 최적화용
+     */
+    public Page<OrderMastListResponse> getOrdersByCustomerWithFiltersForList(Integer custId, String orderDate, 
+                                                                            String startDate, String endDate,
+                                                                            String orderNumber, String sdiv, String comName, 
+                                                                            Pageable pageable) {
+        log.info("거래처별 주문 목록 조회 요청 (최적화) - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
+                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName);
+        
+        Page<OrderMast> orders = orderMastRepository.findByCustomerWithFilters(
+                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
+        Page<OrderMastListResponse> responses = orders.map(this::convertToListResponse);
+        
+        log.info("거래처별 주문 목록 조회 완료 (최적화) - 총 {}건", responses.getTotalElements());
         return responses;
     }
 
@@ -335,6 +372,23 @@ public class OrderMastService {
         
         log.info("주문번호로 주문 조회 완료 - 주문번호: {}, 건수: {}", orderNumber, responses.size());
         return responses;
+    }
+
+    /**
+     * OrderMast Entity를 OrderMastListResponse로 변환 (성능 최적화용)
+     */
+    private OrderMastListResponse convertToListResponse(OrderMast orderMast) {
+        // 출고형태명만 조회 (필요한 경우에만)
+        String sdivDisplayName = "";
+        if (orderMast.getOrderMastSdiv() != null && !orderMast.getOrderMastSdiv().trim().isEmpty()) {
+            try {
+                sdivDisplayName = commonCodeService.getDisplayNameByCode(orderMast.getOrderMastSdiv());
+            } catch (Exception e) {
+                log.warn("출고형태 코드 조회 실패: {}", orderMast.getOrderMastSdiv(), e);
+            }
+        }
+        
+        return OrderMastListResponse.fromWithDisplayName(orderMast, sdivDisplayName);
     }
 
     /**
