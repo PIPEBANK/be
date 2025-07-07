@@ -67,7 +67,7 @@ public class OrderTran {
     private BigDecimal orderTranRate; // 기본단가
 
     @Column(name = "ORDER_TRAN_CNT", precision = 18, scale = 2, nullable = false)
-    private BigDecimal orderTranCnt; // 현재고
+    private BigDecimal orderTranCnt; // 수량
 
     @Column(name = "ORDER_TRAN_CONVERT_WEIGHT", precision = 18, scale = 3, nullable = false, columnDefinition = "decimal(18,3) default '0.000'")
     private BigDecimal orderTranConvertWeight; // 환산중량
@@ -94,7 +94,7 @@ public class OrderTran {
     private BigDecimal orderTranAdv; // 예수금
 
     @Column(name = "ORDER_TRAN_TOT", precision = 18, scale = 0, nullable = false)
-    private BigDecimal orderTranTot; // 합계
+    private BigDecimal orderTranTot; // 합산금액
 
     @Column(name = "ORDER_TRAN_LRATE", precision = 18, scale = 0, nullable = false)
     private BigDecimal orderTranLrate; // 이전판매단가

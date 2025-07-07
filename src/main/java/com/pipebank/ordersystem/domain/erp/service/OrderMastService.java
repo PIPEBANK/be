@@ -2,8 +2,13 @@ package com.pipebank.ordersystem.domain.erp.service;
 
 import com.pipebank.ordersystem.domain.erp.dto.OrderMastResponse;
 import com.pipebank.ordersystem.domain.erp.dto.OrderMastListResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderDetailResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderTranDetailResponse;
 import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
+import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
 import com.pipebank.ordersystem.domain.erp.repository.OrderMastRepository;
+import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -21,6 +26,8 @@ import java.util.stream.Collectors;
 public class OrderMastService {
 
     private final OrderMastRepository orderMastRepository;
+    private final OrderTranRepository orderTranRepository;
+    private final ItemCodeRepository itemCodeRepository;
     private final CommonCodeService commonCodeService;
     private final CustomerService customerService;
 
@@ -375,6 +382,176 @@ public class OrderMastService {
     }
 
     /**
+     * 주문 상세조회 (OrderMast + OrderTran 정보)
+     */
+    public OrderDetailResponse getOrderDetail(String orderNumber) {
+        log.info("주문 상세조회 요청 - 주문번호: {}", orderNumber);
+        
+        // 주문번호를 DATE와 ACNO로 분리
+        String[] parts = orderNumber.split("-");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("잘못된 주문번호 형식입니다. 올바른 형식: YYYYMMDD-숫자 (예: 20240101-1)");
+        }
+        
+        String orderDate = parts[0];
+        Integer acno;
+        try {
+            acno = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("잘못된 주문번호 형식입니다. ACNO는 숫자여야 합니다.");
+        }
+        
+        // OrderMast 조회 (첫 번째 매치되는 것)
+        List<OrderMast> orderMasts = orderMastRepository.findByOrderMastDateAndOrderMastAcno(orderDate, acno);
+        if (orderMasts.isEmpty()) {
+            throw new IllegalArgumentException("존재하지 않는 주문번호입니다: " + orderNumber);
+        }
+        
+        OrderMast orderMast = orderMasts.get(0); // 첫 번째 결과 사용
+        
+        // OrderTran 조회 (동일한 복합키로)
+        List<OrderTran> orderTrans = orderTranRepository.findByOrderMastKey(
+                orderMast.getOrderMastDate(), 
+                orderMast.getOrderMastSosok(), 
+                orderMast.getOrderMastUjcd(), 
+                orderMast.getOrderMastAcno()
+        );
+        
+        // 기본 정보 변환
+        OrderDetailResponse response = OrderDetailResponse.fromOrderMast(orderMast);
+        
+        // 코드 표시명 추가
+        response = addDisplayNames(response, orderMast);
+        
+        // OrderTran 정보 추가
+        if (!orderTrans.isEmpty()) {
+            List<OrderTranDetailResponse> orderTranResponses = orderTrans.stream()
+                    .map(this::convertOrderTranToDetailResponse)
+                    .collect(Collectors.toList());
+            
+            response = OrderDetailResponse.builder()
+                    .orderNumber(response.getOrderNumber())
+                    .orderMastDate(response.getOrderMastDate())
+                    .orderMastSdiv(response.getOrderMastSdiv())
+                    .orderMastSdivDisplayName(response.getOrderMastSdivDisplayName())
+                    .orderMastOdate(response.getOrderMastOdate())
+                    .orderMastDcust(response.getOrderMastDcust())
+                    .orderMastComaddr(response.getOrderMastComaddr())
+                    .orderMastComname(response.getOrderMastComname())
+                    .orderMastCurrency(response.getOrderMastCurrency())
+                    .orderMastCurrencyDisplayName(response.getOrderMastCurrencyDisplayName())
+                    .orderMastCurrencyPer(response.getOrderMastCurrencyPer())
+                    .orderMastReason(response.getOrderMastReason())
+                    .orderMastReasonDisplayName(response.getOrderMastReasonDisplayName())
+                    .orderMastComuname(response.getOrderMastComuname())
+                    .orderMastComutel(response.getOrderMastComutel())
+                    .orderMastRemark(response.getOrderMastRemark())
+                    .orderTranList(orderTranResponses)
+                    .build();
+        }
+        
+        log.info("주문 상세조회 완료 - 주문번호: {}, OrderTran 건수: {}", orderNumber, orderTrans.size());
+        return response;
+    }
+
+    /**
+     * OrderDetailResponse에 코드 표시명 추가
+     */
+    private OrderDetailResponse addDisplayNames(OrderDetailResponse response, OrderMast orderMast) {
+        // 출고형태명
+        String sdivDisplayName = "";
+        if (orderMast.getOrderMastSdiv() != null && !orderMast.getOrderMastSdiv().trim().isEmpty()) {
+            try {
+                sdivDisplayName = commonCodeService.getDisplayNameByCode(orderMast.getOrderMastSdiv());
+            } catch (Exception e) {
+                log.warn("출고형태 코드 조회 실패: {}", orderMast.getOrderMastSdiv(), e);
+            }
+        }
+        
+        // 화폐코드명
+        String currencyDisplayName = "";
+        if (orderMast.getOrderMastCurrency() != null && !orderMast.getOrderMastCurrency().trim().isEmpty()) {
+            try {
+                currencyDisplayName = commonCodeService.getDisplayNameByCode(orderMast.getOrderMastCurrency());
+            } catch (Exception e) {
+                log.warn("화폐 코드 조회 실패: {}", orderMast.getOrderMastCurrency(), e);
+            }
+        }
+        
+        // 용도코드명
+        String reasonDisplayName = "";
+        if (orderMast.getOrderMastReason() != null && !orderMast.getOrderMastReason().trim().isEmpty()) {
+            try {
+                reasonDisplayName = commonCodeService.getDisplayNameByCode(orderMast.getOrderMastReason());
+            } catch (Exception e) {
+                log.warn("용도 코드 조회 실패: {}", orderMast.getOrderMastReason(), e);
+            }
+        }
+        
+        // 새로운 Response 생성 (표시명 포함)
+        return OrderDetailResponse.builder()
+                .orderNumber(response.getOrderNumber())
+                .orderMastDate(response.getOrderMastDate())
+                .orderMastSdiv(response.getOrderMastSdiv())
+                .orderMastSdivDisplayName(sdivDisplayName)
+                .orderMastOdate(response.getOrderMastOdate())
+                .orderMastDcust(response.getOrderMastDcust())
+                .orderMastComaddr(response.getOrderMastComaddr())
+                .orderMastComname(response.getOrderMastComname())
+                .orderMastCurrency(response.getOrderMastCurrency())
+                .orderMastCurrencyDisplayName(currencyDisplayName)
+                .orderMastCurrencyPer(response.getOrderMastCurrencyPer())
+                .orderMastReason(response.getOrderMastReason())
+                .orderMastReasonDisplayName(reasonDisplayName)
+                .orderMastComuname(response.getOrderMastComuname())
+                .orderMastComutel(response.getOrderMastComutel())
+                .orderMastRemark(response.getOrderMastRemark())
+                .orderTranList(response.getOrderTranList())
+                .build();
+    }
+
+    /**
+     * OrderTran을 OrderTranDetailResponse로 변환 (상세페이지용 간단버전)
+     */
+    private OrderTranDetailResponse convertOrderTranToDetailResponse(OrderTran orderTran) {
+        // 제품코드 조회 (co_item_code.item_code_num)
+        String itemCodeNum = "";
+        if (orderTran.getOrderTranItem() != null) {
+            try {
+                itemCodeNum = itemCodeRepository.findById(orderTran.getOrderTranItem())
+                        .map(itemCode -> itemCode.getItemCodeNum())
+                        .orElse("");
+            } catch (Exception e) {
+                log.warn("제품코드 조회 실패 - OrderTranItem: {}", orderTran.getOrderTranItem(), e);
+            }
+        }
+        
+        // 상태 표시명 추가
+        String statusDisplayName = "";
+        if (orderTran.getOrderTranStau() != null && !orderTran.getOrderTranStau().trim().isEmpty()) {
+            try {
+                statusDisplayName = commonCodeService.getDisplayNameByCode(orderTran.getOrderTranStau());
+            } catch (Exception e) {
+                log.warn("OrderTran 상태 코드 조회 실패: {}", orderTran.getOrderTranStau(), e);
+            }
+        }
+        
+        return OrderTranDetailResponse.builder()
+                .itemCodeNum(itemCodeNum)                       // 제품코드
+                .orderTranItem(orderTran.getOrderTranItem())    // 제품번호 (FK)
+                .orderTranDeta(orderTran.getOrderTranDeta())    // 제품명
+                .orderTranSpec(orderTran.getOrderTranSpec())    // 규격
+                .orderTranUnit(orderTran.getOrderTranUnit())    // 단위
+                .orderTranCnt(orderTran.getOrderTranCnt())      // 수량
+                .orderTranDcPer(orderTran.getOrderTranDcPer())  // DC(%)
+                .orderTranAmt(orderTran.getOrderTranAmt())      // 단가
+                .orderTranTot(orderTran.getOrderTranTot())      // 금액
+                .orderTranStau(orderTran.getOrderTranStau())    // 상태코드
+                .orderTranStauDisplayName(statusDisplayName)   // 상태코드명
+                .build();
+    }
+
+    /**
      * OrderMast Entity를 OrderMastListResponse로 변환 (성능 최적화용)
      */
     private OrderMastListResponse convertToListResponse(OrderMast orderMast) {
@@ -413,8 +590,8 @@ public class OrderMastService {
         String buseName = getBuseCodeNameSafely(orderMast.getOrderMastSawonBuse());
         
         // FK 관계 테이블 정보 조회
-        String orderMastCustName = getCustomerNameByIdSafely(orderMast.getOrderMastCust());
-        String orderMastScustName = getCustomerNameByIdSafely(orderMast.getOrderMastScust());
+        String orderMastCustName = getCustomerNameSafely(orderMast.getOrderMastCust());
+        String orderMastScustName = getCustomerNameSafely(orderMast.getOrderMastScust());
         
         return OrderMastResponse.from(orderMast, ujcdDisplayName, reasonDisplayName, tcomdivDisplayName,
                 currencyDisplayName, sdivDisplayName, intypeDisplayName, sosokName, sawonName, buseName,
