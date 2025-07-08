@@ -136,4 +136,30 @@ public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.
             @Param("sdiv") String sdiv,
             @Param("comName") String comName,
             Pageable pageable);
+
+    // 거래처별 주문 조회 (출하번호 검색 포함)
+    @Query("SELECT DISTINCT o FROM OrderMast o LEFT JOIN ShipOrder so ON " +
+           "o.orderMastDate = so.shipOrderOdate AND " +
+           "o.orderMastSosok = so.shipOrderSosok AND " +
+           "o.orderMastUjcd = so.shipOrderUjcd AND " +
+           "o.orderMastAcno = so.shipOrderOacno " +
+           "WHERE o.orderMastCust = :custId AND " +
+           "(:orderDate IS NULL OR o.orderMastDate = :orderDate) AND " +
+           "(:startDate IS NULL OR o.orderMastDate >= :startDate) AND " +
+           "(:endDate IS NULL OR o.orderMastDate <= :endDate) AND " +
+           "(:orderNumber IS NULL OR CONCAT(o.orderMastDate, '-', o.orderMastAcno) LIKE %:orderNumber%) AND " +
+           "(:shipNumber IS NULL OR CONCAT(so.shipOrderDate, '-', so.shipOrderAcno) LIKE %:shipNumber%) AND " +
+           "(:sdiv IS NULL OR o.orderMastSdiv = :sdiv) AND " +
+           "(:comName IS NULL OR o.orderMastComname LIKE %:comName%) " +
+           "ORDER BY o.orderMastDate DESC, o.orderMastSosok ASC, o.orderMastUjcd ASC, o.orderMastAcno ASC")
+    Page<OrderMast> findByCustomerWithFiltersIncludingShipNumber(
+            @Param("custId") Integer custId,
+            @Param("orderDate") String orderDate,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate,
+            @Param("orderNumber") String orderNumber,
+            @Param("shipNumber") String shipNumber,
+            @Param("sdiv") String sdiv,
+            @Param("comName") String comName,
+            Pageable pageable);
 } 

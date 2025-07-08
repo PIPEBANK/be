@@ -193,4 +193,14 @@ public interface OrderTranRepository extends JpaRepository<OrderTran, OrderTran.
            "GROUP BY ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranStau " +
            "ORDER BY ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno")
     List<Object[]> findStatusDistributionByCustomer(@Param("custId") Integer custId);
+
+    /**
+     * 특정 주문 키와 순번으로 OrderTran 조회
+     */
+    @Query("SELECT ot FROM OrderTran ot WHERE ot.orderTranDate = :date AND ot.orderTranSosok = :sosok AND ot.orderTranUjcd = :ujcd AND ot.orderTranAcno = :acno AND ot.orderTranSeq = :seq")
+    List<OrderTran> findByOrderMastKeyAndSeq(@Param("date") String orderTranDate, 
+                                            @Param("sosok") Integer orderTranSosok, 
+                                            @Param("ujcd") String orderTranUjcd, 
+                                            @Param("acno") Integer orderTranAcno,
+                                            @Param("seq") Integer orderTranSeq);
 } 

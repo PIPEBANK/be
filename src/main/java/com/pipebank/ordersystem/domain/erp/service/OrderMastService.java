@@ -7,8 +7,10 @@ import com.pipebank.ordersystem.domain.erp.dto.OrderShipmentResponse;
 import com.pipebank.ordersystem.domain.erp.dto.OrderTranDetailResponse;
 import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
 import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
+import com.pipebank.ordersystem.domain.erp.entity.ShipOrder;
 import com.pipebank.ordersystem.domain.erp.repository.OrderMastRepository;
 import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ShipOrderRepository;
 import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ public class OrderMastService {
 
     private final OrderMastRepository orderMastRepository;
     private final OrderTranRepository orderTranRepository;
+    private final ShipOrderRepository shipOrderRepository;
     private final ItemCodeRepository itemCodeRepository;
     private final CommonCodeService commonCodeService;
     private final CustomerService customerService;
@@ -516,13 +519,20 @@ public class OrderMastService {
      */
     public Page<OrderShipmentResponse> getShipmentStatusByCustomer(Integer custId, String orderDate, 
                                                                   String startDate, String endDate,
-                                                                  String orderNumber, String sdiv, String comName, 
+                                                                  String orderNumber, String shipNumber, String sdiv, String comName, 
                                                                   Pageable pageable) {
-        log.info("거래처별 출하진행현황 조회 요청 - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
-                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName);
+        log.info("거래처별 출하진행현황 조회 요청 - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출하번호: {}, 출고형태: {}, 현장명: {}", 
+                custId, orderDate, startDate, endDate, orderNumber, shipNumber, sdiv, comName);
         
-        Page<OrderMast> orders = orderMastRepository.findByCustomerWithFilters(
-                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
+        // 출하번호 검색이 있는 경우 ShipOrder 조인 쿼리 사용, 없으면 기존 쿼리 사용
+        Page<OrderMast> orders;
+        if (shipNumber != null && !shipNumber.trim().isEmpty()) {
+            orders = orderMastRepository.findByCustomerWithFiltersIncludingShipNumber(
+                    custId, orderDate, startDate, endDate, orderNumber, shipNumber, sdiv, comName, pageable);
+        } else {
+            orders = orderMastRepository.findByCustomerWithFilters(
+                    custId, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
+        }
         
         // 배치 상태 계산을 한 번만 수행
         Map<String, String> statusMap = calculateBatchStatusByCustomer(custId, orders.getContent());
@@ -674,8 +684,12 @@ public class OrderMastService {
             }
         }
         
+        // 출하번호 조회 (ShipOrder를 통해)
+        String shipNumber = getShipNumberByOrderKey(orderMast);
+        
         return OrderShipmentResponse.builder()
                 .orderNumber(orderNumber)
+                .shipNumber(shipNumber)
                 .orderMastDate(orderMast.getOrderMastDate())
                 .orderMastSdiv(orderMast.getOrderMastSdiv())
                 .orderMastSdivDisplayName(sdivDisplayName)
@@ -895,6 +909,30 @@ public class OrderMastService {
      */
     private String makeOrderKey(String date, Integer sosok, String ujcd, Integer acno) {
         return String.format("%s-%d-%s-%d", date, sosok, ujcd, acno);
+    }
+
+    /**
+     * OrderMast에 해당하는 출하번호 조회 (ShipOrder를 통해)
+     */
+    private String getShipNumberByOrderKey(OrderMast orderMast) {
+        try {
+            // ShipOrder 테이블에서 해당 주문에 매핑된 출하정보 조회
+            List<ShipOrder> shipOrders = shipOrderRepository.findByOrderKey(
+                    orderMast.getOrderMastDate(),
+                    orderMast.getOrderMastSosok(),
+                    orderMast.getOrderMastUjcd(),
+                    orderMast.getOrderMastAcno()
+            );
+            
+            if (!shipOrders.isEmpty()) {
+                ShipOrder shipOrder = shipOrders.get(0); // 첫 번째 출하정보 사용
+                return shipOrder.getShipOrderDate() + "-" + shipOrder.getShipOrderAcno();
+            }
+        } catch (Exception e) {
+            log.warn("출하번호 조회 실패 - OrderKey: {}", makeOrderKey(orderMast), e);
+        }
+        
+        return ""; // 출하정보가 없으면 빈 문자열 반환
     }
 
     /**

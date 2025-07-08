@@ -12,6 +12,7 @@ import lombok.Getter;
 public class OrderShipmentResponse {
     
     private String orderNumber;                     // 주문번호 (DATE-ACNO)
+    private String shipNumber;                      // 출하번호 (SHIP_ORDER_DATE-SHIP_ORDER_ACNO)
     private String orderMastDate;                   // 주문일
     private String orderMastSdiv;                   // 출고형태 코드
     private String orderMastSdivDisplayName;        // 출고형태명
