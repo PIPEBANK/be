@@ -22,4 +22,7 @@ public interface ItemDiv1Repository extends JpaRepository<ItemDiv1, String> {
     
     // 사용중인 항목 중 한글명 검색
     List<ItemDiv1> findByItemDiv1UseAndItemDiv1NameContaining(Integer itemDiv1Use, String itemDiv1Name);
+    
+    // 사용중인 항목을 코드순으로 정렬하여 조회
+    List<ItemDiv1> findByItemDiv1UseOrderByItemDiv1Code(Integer itemDiv1Use);
 } 

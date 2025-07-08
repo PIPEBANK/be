@@ -34,4 +34,10 @@ public interface ItemDiv4Repository extends JpaRepository<ItemDiv4, ItemDiv4.Ite
     
     // 사용중인 항목만 조회
     List<ItemDiv4> findByItemDiv4Use(Integer itemDiv4Use);
+    
+    // DIV1, DIV2, DIV3과 사용여부로 조회하여 코드순 정렬
+    List<ItemDiv4> findByItemDiv4Div1AndItemDiv4Div2AndItemDiv4Div3AndItemDiv4UseOrderByItemDiv4Code(String itemDiv4Div1, String itemDiv4Div2, String itemDiv4Div3, Integer itemDiv4Use);
+    
+    // DIV1, DIV2, DIV3과 사용여부, 주문가능여부로 조회하여 코드순 정렬
+    List<ItemDiv4> findByItemDiv4Div1AndItemDiv4Div2AndItemDiv4Div3AndItemDiv4UseAndItemDiv4OrderOrderByItemDiv4Code(String itemDiv4Div1, String itemDiv4Div2, String itemDiv4Div3, Integer itemDiv4Use, Integer itemDiv4Order);
 } 

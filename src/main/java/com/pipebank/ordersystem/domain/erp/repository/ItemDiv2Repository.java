@@ -28,4 +28,7 @@ public interface ItemDiv2Repository extends JpaRepository<ItemDiv2, ItemDiv2.Ite
     
     // 사용중인 항목만 조회
     List<ItemDiv2> findByItemDiv2Use(Integer itemDiv2Use);
+    
+    // DIV1과 사용여부로 조회하여 코드순 정렬
+    List<ItemDiv2> findByItemDiv2Div1AndItemDiv2UseOrderByItemDiv2Code(String itemDiv2Div1, Integer itemDiv2Use);
 } 

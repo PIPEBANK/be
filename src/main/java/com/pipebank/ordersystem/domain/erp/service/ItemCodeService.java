@@ -1,7 +1,7 @@
 package com.pipebank.ordersystem.domain.erp.service;
 
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -11,9 +11,17 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pipebank.ordersystem.domain.erp.dto.ItemCodeResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ItemCodeSearchRequest;
+import com.pipebank.ordersystem.domain.erp.dto.ItemDiv1Response;
+import com.pipebank.ordersystem.domain.erp.dto.ItemDiv2Response;
+import com.pipebank.ordersystem.domain.erp.dto.ItemDiv3Response;
+import com.pipebank.ordersystem.domain.erp.dto.ItemDiv4Response;
+import com.pipebank.ordersystem.domain.erp.dto.ItemSearchResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ItemSelectionResponse;
 import com.pipebank.ordersystem.domain.erp.entity.ItemCode;
+import com.pipebank.ordersystem.domain.erp.entity.ItemDiv1;
+import com.pipebank.ordersystem.domain.erp.entity.ItemDiv2;
+import com.pipebank.ordersystem.domain.erp.entity.ItemDiv3;
+import com.pipebank.ordersystem.domain.erp.entity.ItemDiv4;
 import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
 import com.pipebank.ordersystem.domain.erp.repository.CommonCode3Repository;
 import com.pipebank.ordersystem.domain.erp.repository.CustomerRepository;
@@ -38,529 +46,165 @@ public class ItemCodeService {
     private final ItemDiv4Repository itemDiv4Repository;
     
     /**
-     * 모든 품목 조회
+     * 1단계: 제품종류(DIV1) 목록 조회
      */
-    public List<ItemCodeResponse> getAllItems() {
-        List<ItemCode> items = itemCodeRepository.findAll();
-        return items.stream()
-                .map(this::convertToResponse)
+    public List<ItemDiv1Response> getItemDiv1List() {
+        List<ItemDiv1> itemDiv1List = itemDiv1Repository.findByItemDiv1UseOrderByItemDiv1Code(1);
+        return itemDiv1List.stream()
+                .map(div1 -> ItemDiv1Response.of(
+                    div1.getItemDiv1Code(),
+                    div1.getItemDiv1Name(),
+                    div1.isActive()
+                ))
                 .collect(Collectors.toList());
     }
     
     /**
-     * 품목 코드로 조회
+     * 2단계: 제품군(DIV2) 목록 조회 (DIV1 기준)
      */
-    public Optional<ItemCodeResponse> getItemByCode(Integer itemCode) {
-        return itemCodeRepository.findById(itemCode)
-                .map(this::convertToResponse);
-    }
-    
-    /**
-     * 품목번호로 조회
-     */
-    public Optional<ItemCodeResponse> getItemByNum(String itemNum) {
-        return itemCodeRepository.findByItemCodeNum(itemNum)
-                .map(this::convertToResponse);
-    }
-    
-    /**
-     * 사용중인 품목만 조회
-     */
-    public List<ItemCodeResponse> getActiveItems() {
-        List<ItemCode> items = itemCodeRepository.findByItemCodeUse(1);
-        return items.stream()
-                .map(this::convertToResponse)
+    public List<ItemDiv2Response> getItemDiv2List(String div1) {
+        List<ItemDiv2> itemDiv2List = itemDiv2Repository.findByItemDiv2Div1AndItemDiv2UseOrderByItemDiv2Code(div1, 1);
+        return itemDiv2List.stream()
+                .map(div2 -> ItemDiv2Response.of(
+                    div2.getItemDiv2Div1(),
+                    div2.getItemDiv2Code(),
+                    div2.getItemDiv2Name(),
+                    div2.isActive()
+                ))
                 .collect(Collectors.toList());
     }
     
     /**
-     * 오더센터 사용 품목 조회
+     * 3단계: 제품용도(DIV3) 목록 조회 (DIV1+DIV2 기준)
      */
-    public List<ItemCodeResponse> getOrderableItems() {
-        List<ItemCode> items = itemCodeRepository.findOrderableItems();
-        return items.stream()
-                .map(this::convertToResponse)
+    public List<ItemDiv3Response> getItemDiv3List(String div1, String div2) {
+        List<ItemDiv3> itemDiv3List = itemDiv3Repository.findByItemDiv3Div1AndItemDiv3Div2AndItemDiv3UseOrderByItemDiv3Code(div1, div2, 1);
+        return itemDiv3List.stream()
+                .map(div3 -> ItemDiv3Response.of(
+                    div3.getItemDiv3Div1(),
+                    div3.getItemDiv3Div2(),
+                    div3.getItemDiv3Code(),
+                    div3.getItemDiv3Name(),
+                    div3.isActive()
+                ))
                 .collect(Collectors.toList());
     }
     
     /**
-     * 재고 관리 품목 조회
+     * 4단계: 제품기능(DIV4) 목록 조회 (DIV1+DIV2+DIV3 기준) - 주문가능한 항목만
      */
-    public List<ItemCodeResponse> getStockManagedItems() {
-        List<ItemCode> items = itemCodeRepository.findStockManagedItems();
-        return items.stream()
-                .map(this::convertToResponse)
+    public List<ItemDiv4Response> getItemDiv4List(String div1, String div2, String div3) {
+        List<ItemDiv4> itemDiv4List = itemDiv4Repository.findByItemDiv4Div1AndItemDiv4Div2AndItemDiv4Div3AndItemDiv4UseAndItemDiv4OrderOrderByItemDiv4Code(div1, div2, div3, 1, 1);
+        return itemDiv4List.stream()
+                .map(div4 -> ItemDiv4Response.of(
+                    div4.getItemDiv4Div1(),
+                    div4.getItemDiv4Div2(),
+                    div4.getItemDiv4Div3(),
+                    div4.getItemDiv4Code(),
+                    div4.getItemDiv4Name(),
+                    div4.isActive(),
+                    div4.isOrderable()
+                ))
                 .collect(Collectors.toList());
     }
     
     /**
-     * 키워드로 품목 검색
+     * 5단계: 최종 품목(ItemCode) 목록 조회 (DIV1+DIV2+DIV3+DIV4 기준) - 주문가능한 항목만
      */
-    public List<ItemCodeResponse> searchItems(String keyword) {
-        List<ItemCode> items = itemCodeRepository.searchByKeyword(keyword);
-        return items.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 사용중인 품목 키워드 검색
-     */
-    public List<ItemCodeResponse> searchActiveItems(String keyword) {
-        List<ItemCode> items = itemCodeRepository.searchActiveByKeyword(keyword);
-        return items.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 제품 분류별 품목 조회
-     */
-    public List<ItemCodeResponse> getItemsByProductDivision(String div1, String div2, String div3, String div4) {
-        List<ItemCode> items = itemCodeRepository.findByProductDivision(div1, div2, div3, div4);
-        return items.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 브랜드별 품목 조회
-     */
-    public List<ItemCodeResponse> getItemsByBrand(String brand) {
-        List<ItemCode> items = itemCodeRepository.findByItemCodeBrand(brand);
-        return items.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 매입처별 품목 조회
-     */
-    public List<ItemCodeResponse> getItemsByPurchaseCustomer(Integer custCode) {
-        List<ItemCode> items = itemCodeRepository.findByItemCodePcust(custCode);
-        return items.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 매출처별 품목 조회
-     */
-    public List<ItemCodeResponse> getItemsBySalesCustomer(Integer custCode) {
-        List<ItemCode> items = itemCodeRepository.findByItemCodeScust(custCode);
-        return items.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 품목 코드 범위 조회
-     */
-    public List<ItemCodeResponse> getItemsByCodeRange(Integer startCode, Integer endCode) {
-        List<ItemCode> items = itemCodeRepository.findByItemCodeCodeBetween(startCode, endCode);
-        return items.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 복합 검색 조건으로 품목 조회
-     */
-    public List<ItemCodeResponse> searchItemsWithConditions(ItemCodeSearchRequest request) {
-        // 기본적으로 키워드 검색 사용
-        if (request.getKeyword() != null && !request.getKeyword().trim().isEmpty()) {
-            if (request.getActiveOnly() != null && request.getActiveOnly()) {
-                return searchActiveItems(request.getKeyword());
-            } else {
-                return searchItems(request.getKeyword());
-            }
-        }
-        
-        // 제품 분류별 검색
-        if (request.getItemCodeDiv1() != null || request.getItemCodeDiv2() != null || 
-            request.getItemCodeDiv3() != null || request.getItemCodeDiv4() != null) {
-            return getItemsByProductDivision(
-                request.getItemCodeDiv1(), 
-                request.getItemCodeDiv2(), 
-                request.getItemCodeDiv3(), 
-                request.getItemCodeDiv4()
-            );
-        }
-        
-        // 브랜드별 검색
-        if (request.getItemCodeBrand() != null) {
-            return getItemsByBrand(request.getItemCodeBrand());
-        }
-        
-        // 매입처별 검색
-        if (request.getItemCodePcust() != null) {
-            return getItemsByPurchaseCustomer(request.getItemCodePcust());
-        }
-        
-        // 매출처별 검색
-        if (request.getItemCodeScust() != null) {
-            return getItemsBySalesCustomer(request.getItemCodeScust());
-        }
-        
-        // 코드 범위 검색
-        if (request.getStartCode() != null && request.getEndCode() != null) {
-            return getItemsByCodeRange(request.getStartCode(), request.getEndCode());
-        }
-        
-        // 기본: 활성 품목만 조회
-        if (request.getActiveOnly() != null && request.getActiveOnly()) {
-            return getActiveItems();
-        }
-        
-        // 조건이 없으면 전체 조회
-        return getAllItems();
-    }
-    
-    // ===== 페이징 메서드들 =====
-    
-    /**
-     * 모든 품목 페이징 조회
-     */
-    public Page<ItemCodeResponse> getAllItemsPaged(int page, int size, String sortBy, String sortDir) {
+    public Page<ItemSelectionResponse> getItemsByDivision(String div1, String div2, String div3, String div4,
+                                                         int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
         
-        Page<ItemCode> itemPage = itemCodeRepository.findAll(pageable);
-        return itemPage.map(this::convertToResponse);
+        Page<ItemCode> itemPage = itemCodeRepository.findByItemCodeDiv1AndItemCodeDiv2AndItemCodeDiv3AndItemCodeDiv4AndItemCodeUseAndItemCodeOrder(
+            div1, div2, div3, div4, 1, 1, pageable);
+        
+        return itemPage.map(this::convertToItemSelectionResponse);
     }
     
     /**
-     * 사용중인 품목 페이징 조회
+     * 품목 검색 (제품명과 규격을 분리해서 검색)
      */
-    public Page<ItemCodeResponse> getActiveItemsPaged(int page, int size, String sortBy, String sortDir) {
+    public Page<ItemSearchResponse> searchItemsByNameAndSpec(String itemName, String spec, 
+                                                           int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
         
-        Page<ItemCode> itemPage = itemCodeRepository.findByItemCodeUse(1, pageable);
-        return itemPage.map(this::convertToResponse);
+        Page<ItemCode> itemPage = itemCodeRepository.searchByNameAndSpec(itemName, spec, pageable);
+        return itemPage.map(this::convertToItemSearchResponse);
     }
     
     /**
-     * 키워드로 품목 검색 (페이징)
+     * ItemCode 엔티티를 ItemSelectionResponse DTO로 변환
      */
-    public Page<ItemCodeResponse> searchItemsPaged(String keyword, int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
+    private ItemSelectionResponse convertToItemSelectionResponse(ItemCode item) {
+        // 분류명 조회
+        String div1Name = getDiv1Name(item.getItemCodeDiv1());
+        String div2Name = getDiv2Name(item.getItemCodeDiv1(), item.getItemCodeDiv2());
+        String div3Name = getDiv3Name(item.getItemCodeDiv1(), item.getItemCodeDiv2(), item.getItemCodeDiv3());
+        String div4Name = getDiv4Name(item.getItemCodeDiv1(), item.getItemCodeDiv2(), item.getItemCodeDiv3(), item.getItemCodeDiv4());
         
-        Page<ItemCode> itemPage = itemCodeRepository.searchByKeyword(keyword, pageable);
-        return itemPage.map(this::convertToResponse);
+        return ItemSelectionResponse.of(
+            item.getItemCodeCode(),
+            item.getItemCodeNum(),
+            item.getItemCodeHnam(),
+            item.getItemCodeSpec(),
+            item.getItemCodeSpec2(),
+            item.getItemCodeUnit(),
+            item.getItemCodeSrate(),
+            item.getItemCodeBrand(),
+            item.isActive(),
+            item.isOrderable(),
+            item.getItemCodeDiv1(),
+            item.getItemCodeDiv2(),
+            item.getItemCodeDiv3(),
+            item.getItemCodeDiv4(),
+            div1Name,
+            div2Name,
+            div3Name,
+            div4Name
+        );
     }
     
     /**
-     * 사용중인 품목 키워드 검색 (페이징)
+     * ItemCode 엔티티를 ItemSearchResponse DTO로 변환 (검색용 간단한 정보)
      */
-    public Page<ItemCodeResponse> searchActiveItemsPaged(String keyword, int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<ItemCode> itemPage = itemCodeRepository.searchActiveByKeyword(keyword, pageable);
-        return itemPage.map(this::convertToResponse);
+    private ItemSearchResponse convertToItemSearchResponse(ItemCode item) {
+        return ItemSearchResponse.of(
+            item.getItemCodeCode(),
+            item.getItemCodeNum(),
+            item.getItemCodeHnam(),
+            item.getItemCodeSpec(),
+            item.getItemCodeUnit(),
+            item.getItemCodeSrate(),
+            item.getItemCodeBrand()
+        );
     }
     
-    /**
-     * 제품 분류별 품목 조회 (페이징)
-     */
-    public Page<ItemCodeResponse> getItemsByProductDivisionPaged(String div1, String div2, String div3, String div4, 
-                                                                int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<ItemCode> itemPage = itemCodeRepository.findByProductDivision(div1, div2, div3, div4, pageable);
-        return itemPage.map(this::convertToResponse);
+    // 분류명 조회 헬퍼 메서드들
+    private String getDiv1Name(String div1) {
+        return itemDiv1Repository.findById(div1)
+                .map(ItemDiv1::getItemDiv1Name)
+                .orElse("");
     }
     
-    /**
-     * 브랜드별 품목 조회 (페이징)
-     */
-    public Page<ItemCodeResponse> getItemsByBrandPaged(String brand, int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<ItemCode> itemPage = itemCodeRepository.findByItemCodeBrand(brand, pageable);
-        return itemPage.map(this::convertToResponse);
+    private String getDiv2Name(String div1, String div2) {
+        return itemDiv2Repository.findByItemDiv2Div1AndItemDiv2Code(div1, div2)
+                .map(ItemDiv2::getItemDiv2Name)
+                .orElse("");
     }
     
-    /**
-     * 매입처별 품목 조회 (페이징)
-     */
-    public Page<ItemCodeResponse> getItemsByPurchaseCustomerPaged(Integer custCode, int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<ItemCode> itemPage = itemCodeRepository.findByItemCodePcust(custCode, pageable);
-        return itemPage.map(this::convertToResponse);
+    private String getDiv3Name(String div1, String div2, String div3) {
+        return itemDiv3Repository.findByItemDiv3Div1AndItemDiv3Div2AndItemDiv3Code(div1, div2, div3)
+                .map(ItemDiv3::getItemDiv3Name)
+                .orElse("");
     }
     
-    /**
-     * 매출처별 품목 조회 (페이징)
-     */
-    public Page<ItemCodeResponse> getItemsBySalesCustomerPaged(Integer custCode, int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<ItemCode> itemPage = itemCodeRepository.findByItemCodeScust(custCode, pageable);
-        return itemPage.map(this::convertToResponse);
-    }
-    
-    /**
-     * 오더센터 사용 품목 조회 (페이징)
-     */
-    public Page<ItemCodeResponse> getOrderableItemsPaged(int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<ItemCode> itemPage = itemCodeRepository.findOrderableItems(pageable);
-        return itemPage.map(this::convertToResponse);
-    }
-    
-    /**
-     * 재고 관리 품목 조회 (페이징)
-     */
-    public Page<ItemCodeResponse> getStockManagedItemsPaged(int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<ItemCode> itemPage = itemCodeRepository.findStockManagedItems(pageable);
-        return itemPage.map(this::convertToResponse);
-    }
-    
-    /**
-     * 복합 검색 조건으로 품목 조회 (페이징)
-     */
-    public Page<ItemCodeResponse> searchItemsWithConditionsPaged(ItemCodeSearchRequest request, 
-                                                               int page, int size, String sortBy, String sortDir) {
-        // 기본적으로 키워드 검색 사용
-        if (request.getKeyword() != null && !request.getKeyword().trim().isEmpty()) {
-            if (request.getActiveOnly() != null && request.getActiveOnly()) {
-                return searchActiveItemsPaged(request.getKeyword(), page, size, sortBy, sortDir);
-            } else {
-                return searchItemsPaged(request.getKeyword(), page, size, sortBy, sortDir);
-            }
-        }
-        
-        // 제품 분류별 검색
-        if (request.getItemCodeDiv1() != null || request.getItemCodeDiv2() != null || 
-            request.getItemCodeDiv3() != null || request.getItemCodeDiv4() != null) {
-            return getItemsByProductDivisionPaged(
-                request.getItemCodeDiv1(), 
-                request.getItemCodeDiv2(), 
-                request.getItemCodeDiv3(), 
-                request.getItemCodeDiv4(),
-                page, size, sortBy, sortDir
-            );
-        }
-        
-        // 브랜드별 검색
-        if (request.getItemCodeBrand() != null) {
-            return getItemsByBrandPaged(request.getItemCodeBrand(), page, size, sortBy, sortDir);
-        }
-        
-        // 매입처별 검색
-        if (request.getItemCodePcust() != null) {
-            return getItemsByPurchaseCustomerPaged(request.getItemCodePcust(), page, size, sortBy, sortDir);
-        }
-        
-        // 매출처별 검색
-        if (request.getItemCodeScust() != null) {
-            return getItemsBySalesCustomerPaged(request.getItemCodeScust(), page, size, sortBy, sortDir);
-        }
-        
-        // 기본: 활성 품목만 조회
-        if (request.getActiveOnly() != null && request.getActiveOnly()) {
-            return getActiveItemsPaged(page, size, sortBy, sortDir);
-        }
-        
-        // 조건이 없으면 전체 조회
-        return getAllItemsPaged(page, size, sortBy, sortDir);
-    }
-    
-    /**
-     * ItemCode 엔티티를 ItemCodeResponse DTO로 변환
-     */
-    private ItemCodeResponse convertToResponse(ItemCode item) {
-        ItemCodeResponse.ItemCodeResponseBuilder builder = ItemCodeResponse.builder()
-                .itemCodeCode(item.getItemCodeCode())
-                .itemCodeNum(item.getItemCodeNum())
-                .itemCodeDcod(item.getItemCodeDcod())
-                .itemCodePcod(item.getItemCodePcod())
-                .itemCodeScod(item.getItemCodeScod())
-                .itemCodeHnam(item.getItemCodeHnam())
-                .itemCodeEnam(item.getItemCodeEnam())
-                .itemCodeWord(item.getItemCodeWord())
-                .itemCodeSpec(item.getItemCodeSpec())
-                .itemCodeSpec2(item.getItemCodeSpec2())
-                .itemCodeUnit(item.getItemCodeUnit())
-                .itemCodePcust(item.getItemCodePcust())
-                .itemCodePcust2(item.getItemCodePcust2())
-                .itemCodeScust(item.getItemCodeScust())
-                .itemCodeCalc(item.getItemCodeCalc())
-                .isCalculated(item.isCalculated())
-                .itemCodeSdiv(item.getItemCodeSdiv())
-                .itemCodeVdiv(item.getItemCodeVdiv())
-                .hasVat(item.hasVat())
-                .itemCodeAdiv(item.getItemCodeAdiv())
-                .hasAdvance(item.hasAdvance())
-                .itemCodePrate(item.getItemCodePrate())
-                .itemCodePlrate(item.getItemCodePlrate())
-                .itemCodePlrdate(item.getItemCodePlrdate())
-                .itemCodeSrate(item.getItemCodeSrate())
-                .itemCodeSlrate(item.getItemCodeSlrate())
-                .itemCodeSlrdate(item.getItemCodeSlrdate())
-                .itemCodeLdiv(item.getItemCodeLdiv())
-                .itemCodeUse(item.getItemCodeUse())
-                .isActive(item.isActive())
-                .itemCodeAvrate(item.getItemCodeAvrate())
-                .itemCodeDsdiv(item.getItemCodeDsdiv())
-                .itemCodeBrand(item.getItemCodeBrand())
-                .itemCodePlace(item.getItemCodePlace())
-                .itemCodeNative(item.getItemCodeNative())
-                .itemCodeStock(item.getItemCodeStock())
-                .itemCodeBitem(item.getItemCodeBitem())
-                .itemCodePitem(item.getItemCodePitem())
-                .itemCodeChng(item.getItemCodeChng())
-                .itemCodeAuto(item.getItemCodeAuto())
-                .isAutoProcessed(item.isAutoProcessed())
-                .itemCodeMarket(item.getItemCodeMarket())
-                .isMarketItem(item.isMarketItem())
-                .itemCodeKitchen(item.getItemCodeKitchen())
-                .itemCodePrint(item.getItemCodePrint())
-                .isPrintable(item.isPrintable())
-                .itemCodeDclock(item.getItemCodeDclock())
-                .isDcLocked(item.isDcLocked())
-                .itemCodeLproc(item.getItemCodeLproc())
-                .itemCodeUrate(item.getItemCodeUrate())
-                .itemCodeOption(item.getItemCodeOption())
-                .hasOption(item.hasOption())
-                .itemCodeNstock(item.getItemCodeNstock())
-                .isNoStock(item.isNoStock())
-                .itemCodeSerial(item.getItemCodeSerial())
-                .itemCodeDiv1(item.getItemCodeDiv1())
-                .itemCodeDiv2(item.getItemCodeDiv2())
-                .itemCodeDiv3(item.getItemCodeDiv3())
-                .itemCodeDiv4(item.getItemCodeDiv4())
-                .itemCodeRemark(item.getItemCodeRemark())
-                .itemCodeFdate(item.getItemCodeFdate())
-                .itemCodeFuser(item.getItemCodeFuser())
-                .itemCodeLdate(item.getItemCodeLdate())
-                .itemCodeLuser(item.getItemCodeLuser())
-                .itemCodeMoq(item.getItemCodeMoq())
-                .itemCodeMweight(item.getItemCodeMweight())
-                .itemCodeEaweight(item.getItemCodeEaweight())
-                .itemCodeClass(item.getItemCodeClass())
-                .itemCodeUnitsrate(item.getItemCodeUnitsrate())
-                .itemCodeOrder(item.getItemCodeOrder())
-                .isOrderable(item.isOrderable())
-                .itemCodeWamt(item.getItemCodeWamt())
-                .displayName(item.getDisplayName())
-                .shortName(item.getShortName())
-                .fullSpec(item.getFullSpec())
-                .brandInfo(item.getBrandInfo())
-                .origin(item.getOrigin());
-        
-        // 코드 표시명 설정
-        setCodeDisplayNames(builder, item);
-        
-        return builder.build();
-    }
-    
-    /**
-     * 코드 필드들의 표시명을 설정
-     */
-    private void setCodeDisplayNames(ItemCodeResponse.ItemCodeResponseBuilder builder, ItemCode item) {
-        // 공통코드 표시명 설정
-        if (item.getItemCodeDcod() != null) {
-            commonCode3Repository.findByCommCod3Code(item.getItemCodeDcod())
-                .ifPresent(code -> builder.itemCodeDcodName(code.getCommCod3Hnam()));
-        }
-        
-        if (item.getItemCodePcod() != null) {
-            commonCode3Repository.findByCommCod3Code(item.getItemCodePcod())
-                .ifPresent(code -> builder.itemCodePcodName(code.getCommCod3Hnam()));
-        }
-        
-        if (item.getItemCodeScod() != null) {
-            commonCode3Repository.findByCommCod3Code(item.getItemCodeScod())
-                .ifPresent(code -> builder.itemCodeScodName(code.getCommCod3Hnam()));
-        }
-        
-        if (item.getItemCodeLdiv() != null) {
-            commonCode3Repository.findByCommCod3Code(item.getItemCodeLdiv())
-                .ifPresent(code -> builder.itemCodeLdivName(code.getCommCod3Hnam()));
-        }
-        
-        if (item.getItemCodeDsdiv() != null) {
-            commonCode3Repository.findByCommCod3Code(item.getItemCodeDsdiv())
-                .ifPresent(code -> builder.itemCodeDsdivName(code.getCommCod3Hnam()));
-        }
-        
-        if (item.getItemCodeKitchen() != null) {
-            commonCode3Repository.findByCommCod3Code(item.getItemCodeKitchen())
-                .ifPresent(code -> builder.itemCodeKitchenName(code.getCommCod3Hnam()));
-        }
-        
-        if (item.getItemCodeLproc() != null) {
-            commonCode3Repository.findByCommCod3Code(item.getItemCodeLproc())
-                .ifPresent(code -> builder.itemCodeLprocName(code.getCommCod3Hnam()));
-        }
-        
-        if (item.getItemCodeClass() != null) {
-            commonCode3Repository.findByCommCod3Code(item.getItemCodeClass())
-                .ifPresent(code -> builder.itemCodeClassName(code.getCommCod3Hnam()));
-        }
-        
-        // 거래처명 설정
-        if (item.getItemCodePcust() != null) {
-            customerRepository.findById(item.getItemCodePcust())
-                .ifPresent(customer -> builder.itemCodePcustName(customer.getCustCodeName()));
-        }
-        
-        if (item.getItemCodePcust2() != null) {
-            customerRepository.findById(item.getItemCodePcust2())
-                .ifPresent(customer -> builder.itemCodePcust2Name(customer.getCustCodeName()));
-        }
-        
-        if (item.getItemCodeScust() != null) {
-            customerRepository.findById(item.getItemCodeScust())
-                .ifPresent(customer -> builder.itemCodeScustName(customer.getCustCodeName()));
-        }
-        
-        // 제품 분류명 설정
-        if (item.getItemCodeDiv1() != null) {
-            itemDiv1Repository.findById(item.getItemCodeDiv1())
-                .ifPresent(div -> builder.itemCodeDiv1Name(div.getItemDiv1Name()));
-        }
-        
-        if (item.getItemCodeDiv1() != null && item.getItemCodeDiv2() != null) {
-            itemDiv2Repository.findByItemDiv2Div1AndItemDiv2Code(item.getItemCodeDiv1(), item.getItemCodeDiv2())
-                .ifPresent(div -> builder.itemCodeDiv2Name(div.getItemDiv2Name()));
-        }
-        
-        if (item.getItemCodeDiv1() != null && item.getItemCodeDiv2() != null && item.getItemCodeDiv3() != null) {
-            itemDiv3Repository.findByItemDiv3Div1AndItemDiv3Div2AndItemDiv3Code(
-                item.getItemCodeDiv1(), item.getItemCodeDiv2(), item.getItemCodeDiv3())
-                .ifPresent(div -> builder.itemCodeDiv3Name(div.getItemDiv3Name()));
-        }
-        
-        if (item.getItemCodeDiv1() != null && item.getItemCodeDiv2() != null && 
-            item.getItemCodeDiv3() != null && item.getItemCodeDiv4() != null) {
-            itemDiv4Repository.findByItemDiv4Div1AndItemDiv4Div2AndItemDiv4Div3AndItemDiv4Code(
-                item.getItemCodeDiv1(), item.getItemCodeDiv2(), item.getItemCodeDiv3(), item.getItemCodeDiv4())
-                .ifPresent(div -> builder.itemCodeDiv4Name(div.getItemDiv4Name()));
-        }
+    private String getDiv4Name(String div1, String div2, String div3, String div4) {
+        return itemDiv4Repository.findByItemDiv4Div1AndItemDiv4Div2AndItemDiv4Div3AndItemDiv4Code(div1, div2, div3, div4)
+                .map(ItemDiv4::getItemDiv4Name)
+                .orElse("");
     }
 } 
