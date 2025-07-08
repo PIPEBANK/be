@@ -47,4 +47,19 @@ public interface ShipTranRepository extends JpaRepository<ShipTran, ShipTran.Shi
         @Param("ujcd") String ujcd,
         @Param("acno") Integer acno
     );
+
+    /**
+     * 전표번호별 ShipTran 조회 (출고전표현황용)
+     */
+    @Query("""
+        SELECT st
+        FROM ShipTran st
+        WHERE st.shipTranDate = :slipDate
+        AND st.shipTranAcno = :slipAcno
+        ORDER BY st.shipTranSeq ASC
+        """)
+    List<ShipTran> findBySlipNumber(
+        @Param("slipDate") String slipDate,
+        @Param("slipAcno") Integer slipAcno
+    );
 } 

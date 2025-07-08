@@ -61,4 +61,38 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("shipDate") String shipDate,
         @Param("shipAcno") Integer shipAcno
     );
+
+    /**
+     * 거래처별 출고전표 목록 조회 (페이징 + 필터링)
+     * ShipOrder를 통해 OrderMast와 조인하여 주문번호 정보도 함께 조회
+     */
+    @Query("""
+        SELECT sm, om
+        FROM ShipMast sm
+        JOIN ShipOrder so ON sm.shipMastDate = so.shipOrderDate 
+            AND sm.shipMastSosok = so.shipOrderSosok 
+            AND sm.shipMastUjcd = so.shipOrderUjcd 
+            AND sm.shipMastAcno = so.shipOrderAcno
+        JOIN OrderMast om ON so.shipOrderOdate = om.orderMastDate 
+            AND so.shipOrderSosok = om.orderMastSosok 
+            AND so.shipOrderUjcd = om.orderMastUjcd 
+            AND so.shipOrderOacno = om.orderMastAcno
+        WHERE sm.shipMastCust = :custId
+        AND (:shipDate IS NULL OR sm.shipMastDate = :shipDate)
+        AND (:startDate IS NULL OR sm.shipMastDate >= :startDate)
+        AND (:endDate IS NULL OR sm.shipMastDate <= :endDate)
+        AND (:searchKeyword IS NULL OR 
+             CONCAT(om.orderMastDate, '-', om.orderMastAcno) LIKE %:searchKeyword% OR
+             CONCAT(sm.shipMastDate, '-', sm.shipMastAcno) LIKE %:searchKeyword%)
+        GROUP BY sm.shipMastDate, sm.shipMastSosok, sm.shipMastUjcd, sm.shipMastAcno,
+                 om.orderMastDate, om.orderMastSosok, om.orderMastUjcd, om.orderMastAcno
+        ORDER BY sm.shipMastDate DESC, sm.shipMastAcno DESC
+        """)
+    List<Object[]> findShipSlipListByCustomerWithFiltersNative(
+        @Param("custId") Integer custId,
+        @Param("shipDate") String shipDate,
+        @Param("startDate") String startDate,
+        @Param("endDate") String endDate,
+        @Param("searchKeyword") String searchKeyword
+    );
 } 
