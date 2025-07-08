@@ -164,8 +164,7 @@ public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.
             Pageable pageable);
 
     // 거래처별 출하 조회 (ShipOrder 기준) - 모든 출하번호 표시
-    @Query("SELECT o, so FROM OrderMast o INNER JOIN ShipOrder so ON " +
-           "o.orderMastDate = so.shipOrderOdate AND " +
+    @Query("SELECT o, so FROM OrderMast o INNER JOIN ShipOrder so ON " +   "o.orderMastDate = so.shipOrderOdate AND " +
            "o.orderMastSosok = so.shipOrderSosok AND " +
            "o.orderMastUjcd = so.shipOrderUjcd AND " +
            "o.orderMastAcno = so.shipOrderOacno " +

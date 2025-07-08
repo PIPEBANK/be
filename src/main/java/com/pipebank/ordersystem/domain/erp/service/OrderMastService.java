@@ -706,13 +706,11 @@ public class OrderMastService {
         // 출고형태명 조회
         String sdivDisplayName = getDisplayNameSafely(orderMast.getOrderMastSdiv());
         
-        // 해당 출하의 상태 계산 (ShipTran 기준)
+        // OrderMast 기준 상태 계산 (OrderTran 기반 - 4010 코드)
         String orderKey = makeOrderKey(orderMast);
-        String shipKey = shipOrder.getShipOrderDate() + "-" + shipOrder.getShipOrderSosok() + 
-                        "-" + shipOrder.getShipOrderUjcd() + "-" + shipOrder.getShipOrderAcno();
         
-        // 개별 출하의 상태 계산
-        String status = calculateShipmentStatus(shipKey);
+        // 개별 OrderMast의 상태 계산 (단일 주문이므로 단순 방식 사용)
+        String status = calculateSingleOrderStatus(orderMast);
         String statusDisplayName = "";
         if (!status.isEmpty()) {
             try {
@@ -944,6 +942,24 @@ public class OrderMastService {
      */
     private String makeOrderKey(String date, Integer sosok, String ujcd, Integer acno) {
         return String.format("%s-%d-%s-%d", date, sosok, ujcd, acno);
+    }
+
+    /**
+     * 단일 OrderMast의 상태 계산 (OrderTran 기반 - 4010 코드)
+     */
+    private String calculateSingleOrderStatus(OrderMast orderMast) {
+        try {
+            // 기존 배치 상태 계산 방식을 단일 주문용으로 활용
+            List<OrderMast> singleOrderList = Arrays.asList(orderMast);
+            Map<String, String> statusMap = calculateBatchStatusByCustomer(orderMast.getOrderMastCust(), singleOrderList);
+            
+            String orderKey = makeOrderKey(orderMast);
+            return statusMap.getOrDefault(orderKey, "4010020001"); // 기본값: 수주진행
+            
+        } catch (Exception e) {
+            log.warn("OrderMast 상태 계산 실패 - OrderKey: {}", makeOrderKey(orderMast), e);
+            return "4010020001"; // 에러시 기본값
+        }
     }
 
     /**
