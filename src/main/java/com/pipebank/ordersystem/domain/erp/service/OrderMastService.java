@@ -3,6 +3,7 @@ package com.pipebank.ordersystem.domain.erp.service;
 import com.pipebank.ordersystem.domain.erp.dto.OrderMastResponse;
 import com.pipebank.ordersystem.domain.erp.dto.OrderMastListResponse;
 import com.pipebank.ordersystem.domain.erp.dto.OrderDetailResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderShipmentResponse;
 import com.pipebank.ordersystem.domain.erp.dto.OrderTranDetailResponse;
 import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
 import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
@@ -16,8 +17,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Arrays;
 
 @Service
 @RequiredArgsConstructor
@@ -142,20 +147,45 @@ public class OrderMastService {
     }
 
     /**
+     * 거래처별 주문 목록 조회 (페이징) - 성능 최적화용
+     */
+    public Page<OrderMastListResponse> getOrdersByCustomerForList(Integer orderMastCust, Pageable pageable) {
+        log.info("거래처별 주문 목록 조회 요청 (최적화, 페이징) - 거래처ID: {}", orderMastCust);
+        
+        Page<OrderMast> orders = orderMastRepository.findByOrderMastCustOrderByOrderMastDateDescOrderMastSosokAscOrderMastUjcdAscOrderMastAcnoAsc(orderMastCust, pageable);
+        
+        // 배치 상태 계산을 한 번만 수행
+        Map<String, String> statusMap = calculateBatchStatusByCustomer(orderMastCust, orders.getContent());
+        
+        // 상태 정보를 포함한 변환
+        Page<OrderMastListResponse> responses = orders.map(orderMast -> 
+                convertToListResponseWithPreCalculatedStatus(orderMast, statusMap));
+        
+        log.info("거래처별 주문 목록 조회 완료 (최적화, 페이징) - 총 {}건", responses.getTotalElements());
+        return responses;
+    }
+
+    /**
      * 거래처별 주문 목록 조회 (페이징 + 필터링) - 성능 최적화용
      */
     public Page<OrderMastListResponse> getOrdersByCustomerWithFiltersForList(Integer custId, String orderDate, 
                                                                             String startDate, String endDate,
                                                                             String orderNumber, String sdiv, String comName, 
                                                                             Pageable pageable) {
-        log.info("거래처별 주문 목록 조회 요청 (최적화) - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
+        log.info("거래처별 주문 목록 조회 요청 (필터링 최적화) - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
                 custId, orderDate, startDate, endDate, orderNumber, sdiv, comName);
         
         Page<OrderMast> orders = orderMastRepository.findByCustomerWithFilters(
                 custId, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
-        Page<OrderMastListResponse> responses = orders.map(this::convertToListResponse);
         
-        log.info("거래처별 주문 목록 조회 완료 (최적화) - 총 {}건", responses.getTotalElements());
+        // 배치 상태 계산을 한 번만 수행 (거래처별 간단한 방식 사용)
+        Map<String, String> statusMap = calculateBatchStatusByCustomer(custId, orders.getContent());
+        
+        // 상태 정보를 포함한 변환
+        Page<OrderMastListResponse> responses = orders.map(orderMast -> 
+                convertToListResponseWithPreCalculatedStatus(orderMast, statusMap));
+        
+        log.info("거래처별 주문 목록 조회 완료 (필터링 최적화) - 총 {}건", responses.getTotalElements());
         return responses;
     }
 
@@ -429,12 +459,19 @@ public class OrderMastService {
                     .map(this::convertOrderTranToDetailResponse)
                     .collect(Collectors.toList());
             
+            // 총 금액 계산 (orderTranTot 합계)
+            BigDecimal totalAmount = orderTranResponses.stream()
+                    .map(OrderTranDetailResponse::getOrderTranTot)
+                    .filter(amount -> amount != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
             response = OrderDetailResponse.builder()
                     .orderNumber(response.getOrderNumber())
                     .orderMastDate(response.getOrderMastDate())
                     .orderMastSdiv(response.getOrderMastSdiv())
                     .orderMastSdivDisplayName(response.getOrderMastSdivDisplayName())
                     .orderMastOdate(response.getOrderMastOdate())
+                    .orderMastOtime(response.getOrderMastOtime())
                     .orderMastDcust(response.getOrderMastDcust())
                     .orderMastComaddr(response.getOrderMastComaddr())
                     .orderMastComname(response.getOrderMastComname())
@@ -447,11 +484,55 @@ public class OrderMastService {
                     .orderMastComutel(response.getOrderMastComutel())
                     .orderMastRemark(response.getOrderMastRemark())
                     .orderTranList(orderTranResponses)
+                    .orderTranTotalAmount(totalAmount)
                     .build();
         }
         
         log.info("주문 상세조회 완료 - 주문번호: {}, OrderTran 건수: {}", orderNumber, orderTrans.size());
         return response;
+    }
+
+    /**
+     * 출하진행현황 조회 (페이징 + 필터링)
+     */
+    public Page<OrderShipmentResponse> getShipmentStatus(String orderDate, 
+                                                        String startDate, String endDate,
+                                                        String orderNumber, String sdiv, String comName, 
+                                                        Pageable pageable) {
+        log.info("출하진행현황 조회 요청 - 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
+                orderDate, startDate, endDate, orderNumber, sdiv, comName);
+        
+        // 기존의 필터링 메서드 활용 (모든 거래처 대상)
+        Page<OrderMast> orders = orderMastRepository.findByCustomerWithFilters(
+                null, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
+        Page<OrderShipmentResponse> responses = orders.map(this::convertToShipmentResponse);
+        
+        log.info("출하진행현황 조회 완료 - 총 {}건", responses.getTotalElements());
+        return responses;
+    }
+
+    /**
+     * 거래처별 출하진행현황 조회 (페이징 + 필터링)
+     */
+    public Page<OrderShipmentResponse> getShipmentStatusByCustomer(Integer custId, String orderDate, 
+                                                                  String startDate, String endDate,
+                                                                  String orderNumber, String sdiv, String comName, 
+                                                                  Pageable pageable) {
+        log.info("거래처별 출하진행현황 조회 요청 - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
+                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName);
+        
+        Page<OrderMast> orders = orderMastRepository.findByCustomerWithFilters(
+                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
+        
+        // 배치 상태 계산을 한 번만 수행
+        Map<String, String> statusMap = calculateBatchStatusByCustomer(custId, orders.getContent());
+        
+        // 상태 정보를 포함한 변환
+        Page<OrderShipmentResponse> responses = orders.map(orderMast -> 
+                convertToShipmentResponseWithStatus(orderMast, statusMap));
+        
+        log.info("거래처별 출하진행현황 조회 완료 - 총 {}건", responses.getTotalElements());
+        return responses;
     }
 
     /**
@@ -495,6 +576,7 @@ public class OrderMastService {
                 .orderMastSdiv(response.getOrderMastSdiv())
                 .orderMastSdivDisplayName(sdivDisplayName)
                 .orderMastOdate(response.getOrderMastOdate())
+                .orderMastOtime(response.getOrderMastOtime())
                 .orderMastDcust(response.getOrderMastDcust())
                 .orderMastComaddr(response.getOrderMastComaddr())
                 .orderMastComname(response.getOrderMastComname())
@@ -552,20 +634,56 @@ public class OrderMastService {
     }
 
     /**
-     * OrderMast Entity를 OrderMastListResponse로 변환 (성능 최적화용)
+     * OrderMast를 OrderShipmentResponse로 변환 (출하진행현황용)
      */
-    private OrderMastListResponse convertToListResponse(OrderMast orderMast) {
-        // 출고형태명만 조회 (필요한 경우에만)
-        String sdivDisplayName = "";
-        if (orderMast.getOrderMastSdiv() != null && !orderMast.getOrderMastSdiv().trim().isEmpty()) {
+    private OrderShipmentResponse convertToShipmentResponse(OrderMast orderMast) {
+        String orderNumber = orderMast.getOrderMastDate() + "-" + orderMast.getOrderMastAcno();
+        
+        // 출고형태명 조회
+        String sdivDisplayName = getDisplayNameSafely(orderMast.getOrderMastSdiv());
+        
+        return OrderShipmentResponse.builder()
+                .orderNumber(orderNumber)
+                .orderMastDate(orderMast.getOrderMastDate())
+                .orderMastSdiv(orderMast.getOrderMastSdiv())
+                .orderMastSdivDisplayName(sdivDisplayName)
+                .orderMastComname(orderMast.getOrderMastComname())
+                .orderMastOdate(orderMast.getOrderMastOdate())
+                .build();
+    }
+
+    /**
+     * OrderMast를 OrderShipmentResponse로 변환 (상태 정보 포함)
+     */
+    private OrderShipmentResponse convertToShipmentResponseWithStatus(OrderMast orderMast, 
+                                                                      Map<String, String> statusMap) {
+        String orderNumber = orderMast.getOrderMastDate() + "-" + orderMast.getOrderMastAcno();
+        String orderKey = makeOrderKey(orderMast);
+        
+        // 출고형태명 조회
+        String sdivDisplayName = getDisplayNameSafely(orderMast.getOrderMastSdiv());
+        
+        // 상태 정보 가져오기
+        String status = statusMap.getOrDefault(orderKey, "");
+        String statusDisplayName = "";
+        if (!status.isEmpty()) {
             try {
-                sdivDisplayName = commonCodeService.getDisplayNameByCode(orderMast.getOrderMastSdiv());
+                statusDisplayName = commonCodeService.getDisplayNameByCode(status);
             } catch (Exception e) {
-                log.warn("출고형태 코드 조회 실패: {}", orderMast.getOrderMastSdiv(), e);
+                log.warn("상태 코드 조회 실패: {}", status, e);
             }
         }
         
-        return OrderMastListResponse.fromWithDisplayName(orderMast, sdivDisplayName);
+        return OrderShipmentResponse.builder()
+                .orderNumber(orderNumber)
+                .orderMastDate(orderMast.getOrderMastDate())
+                .orderMastSdiv(orderMast.getOrderMastSdiv())
+                .orderMastSdivDisplayName(sdivDisplayName)
+                .orderMastComname(orderMast.getOrderMastComname())
+                .orderMastOdate(orderMast.getOrderMastOdate())
+                .orderMastStatus(status)
+                .orderMastStatusDisplayName(statusDisplayName)
+                .build();
     }
 
     /**
@@ -689,6 +807,97 @@ public class OrderMastService {
     }
 
     /**
+     * 거래처별 주문 상태를 배치로 계산 (간단한 방식)
+     */
+    private Map<String, String> calculateBatchStatusByCustomer(Integer custId, List<OrderMast> orders) {
+        if (orders.isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        try {
+            // 거래처별로 모든 상태 분포 조회 (간단한 쿼리 사용)
+            List<Object[]> statusDistribution = orderTranRepository.findStatusDistributionByCustomer(custId);
+            
+            // 주문별 상태 계산
+            Map<String, String> statusMap = new HashMap<>();
+            Map<String, Map<String, Long>> orderStatusCounts = new HashMap<>();
+            
+            // 상태 분포 데이터를 맵으로 변환
+            for (Object[] row : statusDistribution) {
+                String date = (String) row[0];
+                Integer sosok = (Integer) row[1];
+                String ujcd = (String) row[2];
+                Integer acno = (Integer) row[3];
+                String status = (String) row[4];
+                Long count = (Long) row[5];
+                
+                String orderKey = makeOrderKey(date, sosok, ujcd, acno);
+                orderStatusCounts.computeIfAbsent(orderKey, k -> new HashMap<>()).put(status, count);
+            }
+            
+            // 조회된 주문들에 대해서만 상태 결정
+            for (OrderMast order : orders) {
+                String orderKey = makeOrderKey(order);
+                if (orderStatusCounts.containsKey(orderKey)) {
+                    Map<String, Long> statusCounts = orderStatusCounts.get(orderKey);
+                    String finalStatus = determineOrderStatus(statusCounts);
+                    statusMap.put(orderKey, finalStatus);
+                } else {
+                    // OrderTran이 없는 경우 기본 상태
+                    statusMap.put(orderKey, "4010020001"); // 수주진행
+                }
+            }
+            
+            return statusMap;
+        } catch (Exception e) {
+            log.error("거래처별 배치 상태 계산 실패 - custId: {}", custId, e);
+            // 에러 발생시 빈 맵 반환 (상태 없이 진행)
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * OrderTran 상태 분포를 기반으로 OrderMast의 최종 상태 결정
+     */
+    private String determineOrderStatus(Map<String, Long> statusCounts) {
+        // 상태 코드 상수
+        final String STATUS_COMPLETED = "4010030001";  // 출하완료
+        final String STATUS_IN_PROGRESS = "4010020001"; // 수주진행  
+        final String STATUS_REGISTERED = "4010010001";  // 수주등록
+        
+        long totalCount = statusCounts.values().stream().mapToLong(Long::longValue).sum();
+        long completedCount = statusCounts.getOrDefault(STATUS_COMPLETED, 0L);
+        
+        // 모든 항목이 출하완료인 경우
+        if (completedCount == totalCount && totalCount > 0) {
+            return STATUS_COMPLETED;
+        }
+        
+        // 하나라도 수주등록이나 수주진행이 있는 경우
+        if (statusCounts.containsKey(STATUS_REGISTERED) || statusCounts.containsKey(STATUS_IN_PROGRESS)) {
+            return STATUS_IN_PROGRESS;
+        }
+        
+        // 기본값: 수주진행
+        return STATUS_IN_PROGRESS;
+    }
+
+    /**
+     * OrderMast 키를 문자열로 변환
+     */
+    private String makeOrderKey(OrderMast orderMast) {
+        return makeOrderKey(orderMast.getOrderMastDate(), orderMast.getOrderMastSosok(), 
+                           orderMast.getOrderMastUjcd(), orderMast.getOrderMastAcno());
+    }
+
+    /**
+     * 주문 키를 문자열로 변환
+     */
+    private String makeOrderKey(String date, Integer sosok, String ujcd, Integer acno) {
+        return String.format("%s-%d-%s-%d", date, sosok, ujcd, acno);
+    }
+
+    /**
      * 주문 통계 정보 클래스
      */
     @lombok.Builder
@@ -697,5 +906,102 @@ public class OrderMastService {
         private final long totalOrders;
         private final long todayOrders;
         private final long monthOrders;
+    }
+
+    /**
+     * OrderMast Entity를 OrderMastListResponse로 변환 (성능 최적화용)
+     */
+    private OrderMastListResponse convertToListResponse(OrderMast orderMast) {
+        // 출고형태명만 조회 (필요한 경우에만)
+        String sdivDisplayName = "";
+        if (orderMast.getOrderMastSdiv() != null && !orderMast.getOrderMastSdiv().trim().isEmpty()) {
+            try {
+                sdivDisplayName = commonCodeService.getDisplayNameByCode(orderMast.getOrderMastSdiv());
+            } catch (Exception e) {
+                log.warn("출고형태 코드 조회 실패: {}", orderMast.getOrderMastSdiv(), e);
+            }
+        }
+        
+        return OrderMastListResponse.fromWithDisplayName(orderMast, sdivDisplayName);
+    }
+
+    /**
+     * 미리 계산된 상태 맵을 사용한 OrderMastListResponse 변환 (성능 최적화)
+     */
+    private OrderMastListResponse convertToListResponseWithPreCalculatedStatus(OrderMast orderMast, 
+                                                                               Map<String, String> statusMap) {
+        String orderKey = makeOrderKey(orderMast);
+        
+        // 출고형태명 조회
+        String sdivDisplayName = "";
+        if (orderMast.getOrderMastSdiv() != null && !orderMast.getOrderMastSdiv().trim().isEmpty()) {
+            try {
+                sdivDisplayName = commonCodeService.getDisplayNameByCode(orderMast.getOrderMastSdiv());
+            } catch (Exception e) {
+                log.warn("출고형태 코드 조회 실패: {}", orderMast.getOrderMastSdiv(), e);
+            }
+        }
+        
+        // 상태 정보 가져오기
+        String status = statusMap.getOrDefault(orderKey, "");
+        String statusDisplayName = "";
+        if (!status.isEmpty()) {
+            try {
+                statusDisplayName = commonCodeService.getDisplayNameByCode(status);
+            } catch (Exception e) {
+                log.warn("상태 코드 조회 실패: {}", status, e);
+            }
+        }
+        
+        return OrderMastListResponse.fromWithStatusAndDisplayNames(
+                orderMast, sdivDisplayName, status, statusDisplayName);
+    }
+
+    /**
+     * 여러 주문의 상태를 배치로 계산
+     */
+    private Map<String, String> calculateBatchStatus(List<OrderMast> orders) {
+        if (orders.isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        // OrderMast 키 목록 생성
+        List<Object[]> orderKeys = orders.stream()
+                .map(order -> new Object[]{
+                        order.getOrderMastDate(),
+                        order.getOrderMastSosok(), 
+                        order.getOrderMastUjcd(),
+                        order.getOrderMastAcno()
+                })
+                .collect(Collectors.toList());
+        
+        // 배치로 OrderTran 상태 분포 조회
+        List<Object[]> statusDistribution = orderTranRepository.findStatusDistributionByOrderKeys(orderKeys);
+        
+        // 주문별 상태 계산
+        Map<String, String> statusMap = new HashMap<>();
+        Map<String, Map<String, Long>> orderStatusCounts = new HashMap<>();
+        
+        // 상태 분포 데이터를 맵으로 변환
+        for (Object[] row : statusDistribution) {
+            String date = (String) row[0];
+            Integer sosok = (Integer) row[1];
+            String ujcd = (String) row[2];
+            Integer acno = (Integer) row[3];
+            String status = (String) row[4];
+            Long count = (Long) row[5];
+            
+            String orderKey = makeOrderKey(date, sosok, ujcd, acno);
+            orderStatusCounts.computeIfAbsent(orderKey, k -> new HashMap<>()).put(status, count);
+        }
+        
+        // 각 주문의 최종 상태 결정
+        for (String orderKey : orderStatusCounts.keySet()) {
+            Map<String, Long> statusCounts = orderStatusCounts.get(orderKey);
+            String finalStatus = determineOrderStatus(statusCounts);
+            statusMap.put(orderKey, finalStatus);
+        }
+        
+        return statusMap;
     }
 } 

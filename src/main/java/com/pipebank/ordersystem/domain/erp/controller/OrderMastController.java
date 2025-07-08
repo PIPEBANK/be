@@ -3,6 +3,7 @@ package com.pipebank.ordersystem.domain.erp.controller;
 import com.pipebank.ordersystem.domain.erp.dto.OrderMastResponse;
 import com.pipebank.ordersystem.domain.erp.dto.OrderMastListResponse;
 import com.pipebank.ordersystem.domain.erp.dto.OrderDetailResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderShipmentResponse;
 import com.pipebank.ordersystem.domain.erp.service.OrderMastService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -73,6 +74,31 @@ public class OrderMastController {
         log.info("주문 상세조회 API 호출 - 주문번호: {}", orderNumber);
         
         OrderDetailResponse response = orderMastService.getOrderDetail(orderNumber);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 거래처별 출하진행현황 조회 (페이징 + 필터링)
+     * GET /api/erp/orders/shipment/customer/{custId}
+     * 
+     * 동일한 필터링 파라미터 지원
+     */
+    @GetMapping("/shipment/customer/{custId}")
+    public ResponseEntity<Page<OrderShipmentResponse>> getShipmentStatusByCustomer(
+            @PathVariable Integer custId,
+            @RequestParam(required = false) String orderDate,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String orderNumber,
+            @RequestParam(required = false) String sdiv,
+            @RequestParam(required = false) String comName,
+            @PageableDefault(size = 20, sort = "orderMastDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        
+        log.info("거래처별 출하진행현황 조회 API 호출 - 거래처ID: {}, 필터: orderDate={}, startDate={}, endDate={}, orderNumber={}, sdiv={}, comName={}", 
+                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName);
+        
+        Page<OrderShipmentResponse> response = orderMastService.getShipmentStatusByCustomer(
+                custId, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
         return ResponseEntity.ok(response);
     }
 

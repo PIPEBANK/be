@@ -146,4 +146,51 @@ public interface OrderTranRepository extends JpaRepository<OrderTran, OrderTran.
      */
     @Query("SELECT ot FROM OrderTran ot WHERE ot.orderTranDate = :date AND ot.orderTranAcno = :acno ORDER BY ot.orderTranSosok ASC, ot.orderTranUjcd ASC, ot.orderTranSeq ASC")
     List<OrderTran> findByOrderTranDateAndOrderTranAcnoOrderByOrderTranSosokAscOrderTranUjcdAscOrderTranSeqAsc(@Param("date") String orderTranDate, @Param("acno") Integer orderTranAcno);
+
+    /**
+     * 여러 주문의 상태 코드를 배치로 조회 (성능 최적화)
+     * 각 주문의 모든 OrderTran 상태를 조회하여 주문별 상태를 계산할 수 있도록 함
+     */
+    @Query("SELECT ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranStau " +
+           "FROM OrderTran ot " +
+           "WHERE (ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno) IN :orderKeys " +
+           "ORDER BY ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranSeq")
+    List<Object[]> findStatusByOrderKeys(@Param("orderKeys") List<Object[]> orderKeys);
+
+    /**
+     * 거래처별 주문들의 상태 코드를 배치로 조회
+     */
+    @Query("SELECT ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranStau " +
+           "FROM OrderTran ot " +
+           "JOIN OrderMast om ON om.orderMastDate = ot.orderTranDate " +
+           "    AND om.orderMastSosok = ot.orderTranSosok " +
+           "    AND om.orderMastUjcd = ot.orderTranUjcd " +
+           "    AND om.orderMastAcno = ot.orderTranAcno " +
+           "WHERE om.orderMastCust = :custId " +
+           "ORDER BY ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranSeq")
+    List<Object[]> findStatusByCustomer(@Param("custId") Integer custId);
+
+    /**
+     * 특정 주문들의 상태 분포를 조회 (각 주문의 상태별 개수)
+     */
+    @Query("SELECT ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranStau, COUNT(*) " +
+           "FROM OrderTran ot " +
+           "WHERE (ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno) IN :orderKeys " +
+           "GROUP BY ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranStau " +
+           "ORDER BY ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno")
+    List<Object[]> findStatusDistributionByOrderKeys(@Param("orderKeys") List<Object[]> orderKeys);
+
+    /**
+     * 거래처별 주문들의 상태 분포를 조회 (더 간단한 방식)
+     */
+    @Query("SELECT ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranStau, COUNT(*) " +
+           "FROM OrderTran ot " +
+           "JOIN OrderMast om ON om.orderMastDate = ot.orderTranDate " +
+           "    AND om.orderMastSosok = ot.orderTranSosok " +
+           "    AND om.orderMastUjcd = ot.orderTranUjcd " +
+           "    AND om.orderMastAcno = ot.orderTranAcno " +
+           "WHERE om.orderMastCust = :custId " +
+           "GROUP BY ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno, ot.orderTranStau " +
+           "ORDER BY ot.orderTranDate, ot.orderTranSosok, ot.orderTranUjcd, ot.orderTranAcno")
+    List<Object[]> findStatusDistributionByCustomer(@Param("custId") Integer custId);
 } 

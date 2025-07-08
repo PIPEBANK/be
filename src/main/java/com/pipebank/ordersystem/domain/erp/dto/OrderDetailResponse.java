@@ -4,6 +4,7 @@ import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -20,6 +21,7 @@ public class OrderDetailResponse {
     private String orderMastSdiv;                  // 출고형태 코드
     private String orderMastSdivDisplayName;       // 출고형태명
     private String orderMastOdate;                 // 도착요구일(납기일자)
+    private String orderMastOtime;                 // 납기시간
     private String orderMastDcust;                 // 수요처
     private String orderMastComaddr;               // 납품현장주소 (Comaddr1+2 합쳐진 것)
     private String orderMastComname;               // 현장명
@@ -34,6 +36,7 @@ public class OrderDetailResponse {
 
     // ===== OrderTran 정보 =====
     private List<OrderTranDetailResponse> orderTranList;   // 주문 상세 목록
+    private BigDecimal orderTranTotalAmount;               // 주문 총 금액 (orderTranTot 합계)
 
     /**
      * OrderMast 엔티티에서 기본 정보 변환
@@ -45,6 +48,7 @@ public class OrderDetailResponse {
                 .orderMastSdiv(orderMast.getOrderMastSdiv())
                 .orderMastSdivDisplayName("") // Service에서 설정
                 .orderMastOdate(orderMast.getOrderMastOdate())
+                .orderMastOtime(orderMast.getOrderMastOtime())
                 .orderMastDcust(orderMast.getOrderMastDcust())
                 .orderMastComaddr(buildFullAddress(orderMast.getOrderMastComaddr1(), orderMast.getOrderMastComaddr2()))
                 .orderMastComname(orderMast.getOrderMastComname())
@@ -74,16 +78,4 @@ public class OrderDetailResponse {
         return "";
     }
 
-    /**
-     * OrderTran 상세 정보 클래스 (추후 구현)
-     */
-    @Getter
-    @Builder
-    public static class OrderTranDetail {
-        // 추후 OrderTran 필드들 구현 예정
-        private String itemCodeNum;         // 제품코드
-        private String orderTranDeta;       // 제품명
-        private String orderTranSpec;       // 규격
-        // ... 기타 필드들
-    }
 } 
