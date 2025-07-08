@@ -16,16 +16,19 @@ import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -517,7 +520,7 @@ public class OrderMastService {
     }
 
     /**
-     * 거래처별 출하진행현황 조회 (페이징 + 필터링) - ShipOrder 기준으로 모든 출하 표시
+     * 거래처별 출하진행현황 조회 (페이징 + 필터링) - ShipOrder 기준으로 모든 출하 표시 (중복 제거)
      */
     public Page<OrderShipmentResponse> getShipmentStatusByCustomer(Integer custId, String orderDate, 
                                                                   String startDate, String endDate,
@@ -526,14 +529,43 @@ public class OrderMastService {
         log.info("거래처별 출하진행현황 조회 요청 - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출하번호: {}, 출고형태: {}, 현장명: {}", 
                 custId, orderDate, startDate, endDate, orderNumber, shipNumber, sdiv, comName);
         
-        // ShipOrder 기준으로 조회하여 모든 출하번호 표시
-        Page<Object[]> shipmentData = orderMastRepository.findShipmentsByCustomerWithFilters(
-                custId, orderDate, startDate, endDate, orderNumber, shipNumber, sdiv, comName, pageable);
+        // 1단계: 모든 데이터를 페이징 없이 조회 (중복 포함)
+        List<Object[]> allShipmentData = orderMastRepository.findShipmentsByCustomerWithFiltersForDeduplication(
+                custId, orderDate, startDate, endDate, orderNumber, shipNumber, sdiv, comName);
         
-        // Object[] 결과를 OrderShipmentResponse로 변환
-        Page<OrderShipmentResponse> responses = shipmentData.map(this::convertShipmentDataToResponse);
+        // 2단계: 중복 제거 - 주문번호-출하번호 조합 기준
+        Map<String, OrderShipmentResponse> uniqueResponses = new LinkedHashMap<>();
         
-        log.info("거래처별 출하진행현황 조회 완료 - 총 {}건", responses.getTotalElements());
+        for (Object[] data : allShipmentData) {
+            OrderMast orderMast = (OrderMast) data[0];
+            ShipOrder shipOrder = (ShipOrder) data[1];
+            
+            String orderNumber_ = orderMast.getOrderMastDate() + "-" + orderMast.getOrderMastAcno();
+            String shipNumber_ = shipOrder.getShipOrderDate() + "-" + shipOrder.getShipOrderAcno();
+            String key = orderNumber_ + "-" + shipNumber_;
+            
+            // 이미 존재하지 않는 경우에만 추가 (첫 번째 것만 유지)
+            if (!uniqueResponses.containsKey(key)) {
+                OrderShipmentResponse response = convertShipmentDataToResponse(data);
+                uniqueResponses.put(key, response);
+            }
+        }
+        
+        // 3단계: 수동 페이징 처리
+        List<OrderShipmentResponse> deduplicatedList = new ArrayList<>(uniqueResponses.values());
+        int totalElements = deduplicatedList.size();
+        int pageSize = pageable.getPageSize();
+        int pageNumber = pageable.getPageNumber();
+        int startIndex = pageNumber * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        
+        List<OrderShipmentResponse> pageContent = deduplicatedList.subList(startIndex, endIndex);
+        
+        // 4단계: Page 객체 생성
+        Page<OrderShipmentResponse> responses = new PageImpl<>(pageContent, pageable, totalElements);
+        
+        log.info("거래처별 출하진행현황 조회 완료 - 원본 {}건, 중복제거 후 {}건, 페이지 {}건", 
+                allShipmentData.size(), totalElements, pageContent.size());
         return responses;
     }
 
