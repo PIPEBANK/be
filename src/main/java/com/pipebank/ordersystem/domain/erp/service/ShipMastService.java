@@ -314,14 +314,14 @@ public class ShipMastService {
      */
     public Page<ShipSlipListResponse> getShipSlipListByCustomer(
             Integer custId, String shipDate, String startDate, String endDate, 
-            String searchKeyword, Pageable pageable) {
+            String orderNumber, String shipNumber, String comName, Pageable pageable) {
         
-        log.info("거래처별 출고전표 목록 조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, searchKeyword={}", 
-                custId, shipDate, startDate, endDate, searchKeyword);
+        log.info("거래처별 출고전표 목록 조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, shipNumber={}, comName={}", 
+                custId, shipDate, startDate, endDate, orderNumber, shipNumber, comName);
 
         // 전체 데이터 조회
         List<Object[]> allResults = shipMastRepository.findShipSlipListByCustomerWithFiltersNative(
-                custId, shipDate, startDate, endDate, searchKeyword);
+                custId, shipDate, startDate, endDate, orderNumber, shipNumber, comName);
 
         // 출하번호별로 중복 제거 (LinkedHashMap으로 순서 보장)
         Map<String, Object[]> uniqueResults = new LinkedHashMap<>();

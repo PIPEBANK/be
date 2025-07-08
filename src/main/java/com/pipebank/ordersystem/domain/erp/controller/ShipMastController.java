@@ -118,14 +118,16 @@ public class ShipMastController {
      * - shipDate: 출고일자 (정확히 일치)
      * - startDate: 시작 출고일자 (범위 조회)
      * - endDate: 종료 출고일자 (범위 조회)
-     * - searchKeyword: 주문번호 또는 출하번호로 검색 (부분 검색)
+     * - orderNumber: 주문번호 (부분 검색)
+     * - shipNumber: 출하번호 (부분 검색)
+     * - comName: 현장명 (부분 검색)
      * 
      * 응답 정보:
      * - 주문번호, 출하번호, 현장명, 출고일자, 출고금액
      * 
      * 예시: 
      * - GET /api/erp/shipments/slips/customer/9?startDate=20240101&endDate=20240131
-     * - GET /api/erp/shipments/slips/customer/9?searchKeyword=20240315-123
+     * - GET /api/erp/shipments/slips/customer/9?orderNumber=20240315-123&comName=대화도시가스
      */
     @GetMapping("/slips/customer/{custId}")
     public ResponseEntity<Page<ShipSlipListResponse>> getShipSlipListByCustomer(
@@ -133,14 +135,16 @@ public class ShipMastController {
             @RequestParam(required = false) String shipDate,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
-            @RequestParam(required = false) String searchKeyword,
+            @RequestParam(required = false) String orderNumber,
+            @RequestParam(required = false) String shipNumber,
+            @RequestParam(required = false) String comName,
             @PageableDefault(size = 20, sort = "shipMastDate", direction = Sort.Direction.DESC) Pageable pageable) {
         
-        log.info("거래처별 출고전표 목록 조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, searchKeyword={}", 
-                custId, shipDate, startDate, endDate, searchKeyword);
+        log.info("거래처별 출고전표 목록 조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, shipNumber={}, comName={}", 
+                custId, shipDate, startDate, endDate, orderNumber, shipNumber, comName);
         
         Page<ShipSlipListResponse> response = shipMastService.getShipSlipListByCustomer(
-                custId, shipDate, startDate, endDate, searchKeyword, pageable);
+                custId, shipDate, startDate, endDate, orderNumber, shipNumber, comName, pageable);
         return ResponseEntity.ok(response);
     }
 } 

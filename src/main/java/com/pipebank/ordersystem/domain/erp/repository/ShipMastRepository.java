@@ -81,9 +81,9 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND (:shipDate IS NULL OR sm.shipMastDate = :shipDate)
         AND (:startDate IS NULL OR sm.shipMastDate >= :startDate)
         AND (:endDate IS NULL OR sm.shipMastDate <= :endDate)
-        AND (:searchKeyword IS NULL OR 
-             CONCAT(om.orderMastDate, '-', om.orderMastAcno) LIKE %:searchKeyword% OR
-             CONCAT(sm.shipMastDate, '-', sm.shipMastAcno) LIKE %:searchKeyword%)
+        AND (:orderNumber IS NULL OR CONCAT(om.orderMastDate, '-', om.orderMastAcno) LIKE %:orderNumber%)
+        AND (:shipNumber IS NULL OR CONCAT(sm.shipMastDate, '-', sm.shipMastAcno) LIKE %:shipNumber%)
+        AND (:comName IS NULL OR sm.shipMastComname LIKE %:comName%)
         GROUP BY sm.shipMastDate, sm.shipMastSosok, sm.shipMastUjcd, sm.shipMastAcno,
                  om.orderMastDate, om.orderMastSosok, om.orderMastUjcd, om.orderMastAcno
         ORDER BY sm.shipMastDate DESC, sm.shipMastAcno DESC
@@ -93,6 +93,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("shipDate") String shipDate,
         @Param("startDate") String startDate,
         @Param("endDate") String endDate,
-        @Param("searchKeyword") String searchKeyword
+        @Param("orderNumber") String orderNumber,
+        @Param("shipNumber") String shipNumber,
+        @Param("comName") String comName
     );
 } 
