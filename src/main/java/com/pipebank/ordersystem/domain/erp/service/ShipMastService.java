@@ -458,9 +458,32 @@ public class ShipMastService {
         // 출하번호 생성
         String shipNumber = shipMast.getShipMastDate() + "-" + shipMast.getShipMastAcno();
 
+        // 주문번호 조회 (ShipOrder를 통해)
+        String orderNumber = "";
+        try {
+            List<ShipOrder> shipOrders = shipOrderRepository.findByShipKeyAndSeq(
+                    shipMast.getShipMastDate(),
+                    shipMast.getShipMastSosok(),
+                    shipMast.getShipMastUjcd(),
+                    shipMast.getShipMastAcno(),
+                    shipTran.getShipTranSeq()
+            );
+
+            if (!shipOrders.isEmpty()) {
+                ShipOrder shipOrder = shipOrders.get(0);
+                orderNumber = shipOrder.getShipOrderOdate() + "-" + shipOrder.getShipOrderOacno();
+            }
+        } catch (Exception e) {
+            log.warn("주문번호 조회 실패 - ShipMast: {}-{}-{}-{}, ShipTranSeq: {}", 
+                    shipMast.getShipMastDate(), shipMast.getShipMastSosok(), 
+                    shipMast.getShipMastUjcd(), shipMast.getShipMastAcno(), 
+                    shipTran.getShipTranSeq(), e);
+        }
+
         return ShipmentItemResponse.builder()
                 .shipMastComname(shipMast.getShipMastComname())
                 .shipNumber(shipNumber)
+                .orderNumber(orderNumber)
                 .shipTranDeta(shipTran.getShipTranDeta())
                 .shipTranSpec(shipTran.getShipTranSpec())
                 .shipTranUnit(shipTran.getShipTranUnit())

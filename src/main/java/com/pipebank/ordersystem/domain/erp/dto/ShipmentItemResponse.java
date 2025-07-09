@@ -15,6 +15,7 @@ public class ShipmentItemResponse {
     
     private String shipMastComname;         // 현장명 (SHIP_MAST_COMNAME)
     private String shipNumber;              // 출하번호 (SHIP_DATE-SHIP_ACNO)
+    private String orderNumber;             // 주문번호 (ORDER_DATE-ORDER_ACNO)
     private String shipTranDeta;            // 제품명 (SHIP_TRAN_DETA)
     private String shipTranSpec;            // 규격 (SHIP_TRAN_SPEC)
     private String shipTranUnit;            // 단위 (SHIP_TRAN_UNIT)

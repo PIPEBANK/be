@@ -8,6 +8,7 @@ import com.pipebank.ordersystem.domain.erp.dto.OrderTranDetailResponse;
 import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
 import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
 import com.pipebank.ordersystem.domain.erp.entity.ShipOrder;
+import com.pipebank.ordersystem.domain.erp.entity.ShipTran;
 import com.pipebank.ordersystem.domain.erp.repository.OrderMastRepository;
 import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
 import com.pipebank.ordersystem.domain.erp.repository.ShipOrderRepository;
@@ -465,6 +466,24 @@ public class OrderMastService {
         if (!orderTrans.isEmpty()) {
             List<OrderTranDetailResponse> orderTranResponses = orderTrans.stream()
                     .map(this::convertOrderTranToDetailResponse)
+                    .sorted((a, b) -> {
+                        // 출하번호로 정렬 (출하번호가 없는 것은 마지막으로)
+                        String shipA = a.getShipNumber();
+                        String shipB = b.getShipNumber();
+                        
+                        if (shipA == null || shipA.isEmpty()) {
+                            if (shipB == null || shipB.isEmpty()) {
+                                return 0; // 둘 다 없으면 동일
+                            }
+                            return 1; // A가 없으면 뒤로
+                        }
+                        if (shipB == null || shipB.isEmpty()) {
+                            return -1; // B가 없으면 A가 앞으로
+                        }
+                        
+                        // 둘 다 있으면 출하번호로 정렬
+                        return shipA.compareTo(shipB);
+                    })
                     .collect(Collectors.toList());
             
             // 총 금액 계산 (orderTranTot 합계)
@@ -652,6 +671,38 @@ public class OrderMastService {
             }
         }
         
+        // ===== 출하정보 조회 =====
+        String shipNumber = "";
+        BigDecimal shipQuantity = BigDecimal.ZERO;
+        
+        try {
+            // ShipTran에서 주문키로 직접 조회 (ShipOrder JOIN 포함)
+            List<ShipTran> shipTrans = shipTranRepository.findByOrderKeyAndItem(
+                    orderTran.getOrderTranDate(),
+                    orderTran.getOrderTranSosok(),
+                    orderTran.getOrderTranUjcd(),
+                    orderTran.getOrderTranAcno(),
+                    orderTran.getOrderTranItem()
+            );
+            
+            if (!shipTrans.isEmpty()) {
+                // 첫 번째 ShipTran의 출하번호 사용 (shipTranDate + "-" + shipTranAcno)
+                ShipTran firstShipTran = shipTrans.get(0);
+                shipNumber = firstShipTran.getShipTranDate() + "-" + firstShipTran.getShipTranAcno();
+                
+                // 같은 품목의 출하량 합계 계산
+                shipQuantity = shipTrans.stream()
+                        .map(ShipTran::getShipTranCnt)
+                        .filter(cnt -> cnt != null)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
+        } catch (Exception e) {
+            log.warn("출하정보 조회 실패 - OrderTran: {}-{}-{}-{}, Item: {}", 
+                    orderTran.getOrderTranDate(), orderTran.getOrderTranSosok(), 
+                    orderTran.getOrderTranUjcd(), orderTran.getOrderTranAcno(), 
+                    orderTran.getOrderTranItem(), e);
+        }
+        
         return OrderTranDetailResponse.builder()
                 .itemCodeNum(itemCodeNum)                       // 제품코드
                 .orderTranItem(orderTran.getOrderTranItem())    // 제품번호 (FK)
@@ -664,6 +715,8 @@ public class OrderMastService {
                 .orderTranTot(orderTran.getOrderTranTot())      // 금액
                 .orderTranStau(orderTran.getOrderTranStau())    // 상태코드
                 .orderTranStauDisplayName(statusDisplayName)   // 상태코드명
+                .shipNumber(shipNumber)                         // 출하번호
+                .shipQuantity(shipQuantity)                     // 출하량
                 .build();
     }
 
