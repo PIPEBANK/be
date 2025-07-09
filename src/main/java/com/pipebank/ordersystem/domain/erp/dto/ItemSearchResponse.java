@@ -1,6 +1,7 @@
 package com.pipebank.ordersystem.domain.erp.dto;
 
 import java.math.BigDecimal;
+
 import lombok.Builder;
 import lombok.Getter;
 
@@ -18,9 +19,11 @@ public class ItemSearchResponse {
     private String unit;            // 단위
     private BigDecimal saleRate;    // 판매단가
     private String brand;           // 브랜드
+    private BigDecimal stockQuantity; // 재고수량
     
     public static ItemSearchResponse of(Integer itemCode, String itemNum, String itemName,
-                                       String spec, String unit, BigDecimal saleRate, String brand) {
+                                       String spec, String unit, BigDecimal saleRate, String brand,
+                                       BigDecimal stockQuantity) {
         return ItemSearchResponse.builder()
                 .itemCode(itemCode)
                 .itemNum(itemNum)
@@ -29,6 +32,7 @@ public class ItemSearchResponse {
                 .unit(unit)
                 .saleRate(saleRate)
                 .brand(brand)
+                .stockQuantity(stockQuantity)
                 .build();
     }
 } 

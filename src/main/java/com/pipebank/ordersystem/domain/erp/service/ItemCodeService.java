@@ -22,13 +22,14 @@ import com.pipebank.ordersystem.domain.erp.entity.ItemDiv1;
 import com.pipebank.ordersystem.domain.erp.entity.ItemDiv2;
 import com.pipebank.ordersystem.domain.erp.entity.ItemDiv3;
 import com.pipebank.ordersystem.domain.erp.entity.ItemDiv4;
-import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
 import com.pipebank.ordersystem.domain.erp.repository.CommonCode3Repository;
 import com.pipebank.ordersystem.domain.erp.repository.CustomerRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
 import com.pipebank.ordersystem.domain.erp.repository.ItemDiv1Repository;
 import com.pipebank.ordersystem.domain.erp.repository.ItemDiv2Repository;
 import com.pipebank.ordersystem.domain.erp.repository.ItemDiv3Repository;
 import com.pipebank.ordersystem.domain.erp.repository.ItemDiv4Repository;
+import com.pipebank.ordersystem.domain.erp.repository.StockDateRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -44,6 +45,7 @@ public class ItemCodeService {
     private final ItemDiv2Repository itemDiv2Repository;
     private final ItemDiv3Repository itemDiv3Repository;
     private final ItemDiv4Repository itemDiv4Repository;
+    private final StockDateRepository stockDateRepository;
     
     /**
      * 1단계: 제품종류(DIV1) 목록 조회
@@ -146,6 +148,10 @@ public class ItemCodeService {
         String div3Name = getDiv3Name(item.getItemCodeDiv1(), item.getItemCodeDiv2(), item.getItemCodeDiv3());
         String div4Name = getDiv4Name(item.getItemCodeDiv1(), item.getItemCodeDiv2(), item.getItemCodeDiv3(), item.getItemCodeDiv4());
         
+        // 재고수량 조회 (부서7 기준)
+        BigDecimal stockQuantity = stockDateRepository.findStockQuantityByItemCodeAndBuse7(item.getItemCodeCode())
+                .orElse(BigDecimal.ZERO);
+        
         return ItemSelectionResponse.of(
             item.getItemCodeCode(),
             item.getItemCodeNum(),
@@ -164,7 +170,8 @@ public class ItemCodeService {
             div1Name,
             div2Name,
             div3Name,
-            div4Name
+            div4Name,
+            stockQuantity
         );
     }
     
@@ -172,6 +179,10 @@ public class ItemCodeService {
      * ItemCode 엔티티를 ItemSearchResponse DTO로 변환 (검색용 간단한 정보)
      */
     private ItemSearchResponse convertToItemSearchResponse(ItemCode item) {
+        // 재고수량 조회 (부서7 기준)
+        BigDecimal stockQuantity = stockDateRepository.findStockQuantityByItemCodeAndBuse7(item.getItemCodeCode())
+                .orElse(BigDecimal.ZERO);
+                
         return ItemSearchResponse.of(
             item.getItemCodeCode(),
             item.getItemCodeNum(),
@@ -179,7 +190,8 @@ public class ItemCodeService {
             item.getItemCodeSpec(),
             item.getItemCodeUnit(),
             item.getItemCodeSrate(),
-            item.getItemCodeBrand()
+            item.getItemCodeBrand(),
+            stockQuantity
         );
     }
     
