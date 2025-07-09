@@ -1,13 +1,12 @@
 package com.pipebank.ordersystem.domain.web.temp.dto;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -20,8 +19,8 @@ public class TempWebOrderTranCreateRequest {
     private String orderTranDate;
     private Integer orderTranSosok;
     private String orderTranUjcd;
-    private Integer orderTranAcno;
-    private Integer orderTranSeq;
+    private Integer orderTranAcno; // 통합 API에서 자동으로 설정됨
+    // orderTranSeq는 자동생성
     
     // 기본 필드들
     private String orderTranItemVer;
@@ -49,10 +48,7 @@ public class TempWebOrderTranCreateRequest {
     private Integer orderTranLdiv;
     private String orderTranRemark;
     private String orderTranStau;
-    private LocalDateTime orderTranFdate;
-    private String orderTranFuser;
-    private LocalDateTime orderTranLdate;
-    private String orderTranLuser;
+    // orderTranFdate, orderTranFuser, orderTranLdate, orderTranLuser는 자동생성
     private BigDecimal orderTranWamt;
     
     // 임시저장용 필드들

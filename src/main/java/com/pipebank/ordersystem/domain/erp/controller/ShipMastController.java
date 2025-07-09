@@ -5,6 +5,7 @@ import com.pipebank.ordersystem.domain.erp.dto.ShipmentDetailResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipSlipResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipSlipSummaryResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipSlipListResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipmentItemResponse;
 import com.pipebank.ordersystem.domain.erp.service.ShipMastService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -145,6 +146,47 @@ public class ShipMastController {
         
         Page<ShipSlipListResponse> response = shipMastService.getShipSlipListByCustomer(
                 custId, shipDate, startDate, endDate, orderNumber, shipNumber, comName, pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 거래처별 현장별 출하조회 (ShipTran 단위, 페이징 + 필터링)
+     * GET /api/erp/shipments/items/customer/{custId}
+     * 
+     * 거래처코드로 현장별 출하 정보를 ShipTran 단위로 조회합니다.
+     * 모든 제품별 출하 정보가 표시되며 중복 제거하지 않습니다.
+     * 
+     * 필터링 파라미터:
+     * - shipDate: 출고일자 (정확히 일치)
+     * - startDate: 시작 출고일자 (범위 조회)
+     * - endDate: 종료 출고일자 (범위 조회)
+     * - shipNumber: 출하번호 (부분 검색)
+     * - itemName: 제품명 (부분 검색)
+     * - comName: 현장명 (부분 검색)
+     * 
+     * 응답 정보:
+     * - 현장명, 출하번호, 제품명, 규격, 단위, 출고일자, 수량, 단가
+     * 
+     * 예시: 
+     * - GET /api/erp/shipments/items/customer/9?startDate=20240101&endDate=20240131
+     * - GET /api/erp/shipments/items/customer/9?shipNumber=20240315-123&itemName=파이프
+     */
+    @GetMapping("/items/customer/{custId}")
+    public ResponseEntity<Page<ShipmentItemResponse>> getShipmentItemsByCustomer(
+            @PathVariable Integer custId,
+            @RequestParam(required = false) String shipDate,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String shipNumber,
+            @RequestParam(required = false) String itemName,
+            @RequestParam(required = false) String comName,
+            @PageableDefault(size = 20, sort = "shipMastDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        
+        log.info("거래처별 현장별 출하조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, shipNumber={}, itemName={}, comName={}", 
+                custId, shipDate, startDate, endDate, shipNumber, itemName, comName);
+        
+        Page<ShipmentItemResponse> response = shipMastService.getShipmentItemsByCustomer(
+                custId, shipDate, startDate, endDate, shipNumber, itemName, comName, pageable);
         return ResponseEntity.ok(response);
     }
 } 

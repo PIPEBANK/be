@@ -5,6 +5,7 @@ import com.pipebank.ordersystem.domain.erp.dto.ShipmentDetailResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipSlipResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipSlipSummaryResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipSlipListResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipmentItemResponse;
 import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
 import com.pipebank.ordersystem.domain.erp.entity.ShipMast;
 import com.pipebank.ordersystem.domain.erp.entity.ShipTran;
@@ -424,6 +425,51 @@ public class ShipMastService {
         }
 
         return amountMap;
+    }
+
+    /**
+     * 거래처별 현장별 출하조회 (ShipTran 단위, 페이징 + 필터링)
+     */
+    public Page<ShipmentItemResponse> getShipmentItemsByCustomer(
+            Integer custId, String shipDate, String startDate, String endDate,
+            String shipNumber, String itemName, String comName, Pageable pageable) {
+        
+        log.info("거래처별 현장별 출하조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, shipNumber={}, itemName={}, comName={}", 
+                custId, shipDate, startDate, endDate, shipNumber, itemName, comName);
+
+        // ShipTran 단위로 조회 (중복 제거 없음)
+        Page<Object[]> shipmentData = shipMastRepository.findShipmentItemsByCustomerWithFilters(
+                custId, shipDate, startDate, endDate, shipNumber, itemName, comName, pageable);
+
+        // Object[] 결과를 ShipmentItemResponse로 변환
+        Page<ShipmentItemResponse> responses = shipmentData.map(this::convertToShipmentItemResponse);
+
+        log.info("거래처별 현장별 출하조회 완료 - 총 {}건", responses.getTotalElements());
+        return responses;
+    }
+
+    /**
+     * Object[] 결과를 ShipmentItemResponse로 변환
+     */
+    private ShipmentItemResponse convertToShipmentItemResponse(Object[] result) {
+        ShipMast shipMast = (ShipMast) result[0];
+        ShipTran shipTran = (ShipTran) result[1];
+
+        // 출하번호 생성
+        String shipNumber = shipMast.getShipMastDate() + "-" + shipMast.getShipMastAcno();
+
+        return ShipmentItemResponse.builder()
+                .shipMastComname(shipMast.getShipMastComname())
+                .shipNumber(shipNumber)
+                .shipTranDeta(shipTran.getShipTranDeta())
+                .shipTranSpec(shipTran.getShipTranSpec())
+                .shipTranUnit(shipTran.getShipTranUnit())
+                .shipTranDate(shipTran.getShipTranDate())
+                .shipTranCnt(shipTran.getShipTranCnt())
+                .shipTranTot(shipTran.getShipTranTot())
+                .shipMastCust(shipMast.getShipMastCust())
+                .shipTranSeq(shipTran.getShipTranSeq())
+                .build();
     }
 
     /**

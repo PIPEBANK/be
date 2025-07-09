@@ -97,4 +97,35 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("shipNumber") String shipNumber,
         @Param("comName") String comName
     );
+
+    /**
+     * 거래처별 현장별 출하조회 (ShipTran 단위) - 페이징 + 필터링
+     * ShipMast → ShipTran JOIN으로 모든 제품별 출하 정보 조회
+     */
+    @Query("""
+        SELECT sm, st
+        FROM ShipMast sm
+        JOIN ShipTran st ON sm.shipMastDate = st.shipTranDate 
+            AND sm.shipMastSosok = st.shipTranSosok 
+            AND sm.shipMastUjcd = st.shipTranUjcd 
+            AND sm.shipMastAcno = st.shipTranAcno
+        WHERE sm.shipMastCust = :custId
+        AND (:shipDate IS NULL OR st.shipTranDate = :shipDate)
+        AND (:startDate IS NULL OR st.shipTranDate >= :startDate)
+        AND (:endDate IS NULL OR st.shipTranDate <= :endDate)
+        AND (:shipNumber IS NULL OR CONCAT(sm.shipMastDate, '-', sm.shipMastAcno) LIKE %:shipNumber%)
+        AND (:itemName IS NULL OR st.shipTranDeta LIKE %:itemName%)
+        AND (:comName IS NULL OR sm.shipMastComname LIKE %:comName%)
+        ORDER BY st.shipTranDate DESC, sm.shipMastDate DESC, sm.shipMastAcno DESC, st.shipTranSeq ASC
+        """)
+    Page<Object[]> findShipmentItemsByCustomerWithFilters(
+        @Param("custId") Integer custId,
+        @Param("shipDate") String shipDate,
+        @Param("startDate") String startDate,
+        @Param("endDate") String endDate,
+        @Param("shipNumber") String shipNumber,
+        @Param("itemName") String itemName,
+        @Param("comName") String comName,
+        Pageable pageable
+    );
 } 

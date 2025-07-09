@@ -1,20 +1,23 @@
 package com.pipebank.ordersystem.domain.web.temp.service;
 
-import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderTranCreateRequest;
-import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderTranResponse;
-import com.pipebank.ordersystem.domain.web.temp.entity.TempWebOrderTran;
-import com.pipebank.ordersystem.domain.web.temp.repository.TempWebOrderTranRepository;
-import com.pipebank.ordersystem.domain.web.order.entity.WebOrderTran;
-import com.pipebank.ordersystem.domain.web.order.repository.WebOrderTranRepository;
-import com.pipebank.ordersystem.global.security.SecurityUtils;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pipebank.ordersystem.domain.web.order.entity.WebOrderTran;
+import com.pipebank.ordersystem.domain.web.order.repository.WebOrderTranRepository;
+import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderTranCreateRequest;
+import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderTranResponse;
+import com.pipebank.ordersystem.domain.web.temp.entity.TempWebOrderTran;
+import com.pipebank.ordersystem.domain.web.temp.repository.TempWebOrderMastRepository;
+import com.pipebank.ordersystem.domain.web.temp.repository.TempWebOrderTranRepository;
+import com.pipebank.ordersystem.global.security.SecurityUtils;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 public class TempWebOrderTranService {
 
     private final TempWebOrderTranRepository tempWebOrderTranRepository;
+    private final TempWebOrderMastRepository tempWebOrderMastRepository;
     private final WebOrderTranRepository webOrderTranRepository;
 
     // 생성
@@ -29,13 +33,20 @@ public class TempWebOrderTranService {
     public TempWebOrderTranResponse create(TempWebOrderTranCreateRequest request) {
         // 현재 로그인한 사용자 ID 자동 설정
         String currentUserId = SecurityUtils.getCurrentMemberId();
+        LocalDateTime now = LocalDateTime.now();
+        
+        // SEQ 자동 생성 (해당 주문의 시퀀스)
+        Integer nextSeq = generateNextSeq(request.getOrderTranDate(), 
+                                        request.getOrderTranSosok(), 
+                                        request.getOrderTranUjcd(), 
+                                        request.getOrderTranAcno());
         
         TempWebOrderTran entity = TempWebOrderTran.builder()
                 .orderTranDate(request.getOrderTranDate())
                 .orderTranSosok(request.getOrderTranSosok())
                 .orderTranUjcd(request.getOrderTranUjcd())
-                .orderTranAcno(request.getOrderTranAcno())
-                .orderTranSeq(request.getOrderTranSeq())
+                .orderTranAcno(request.getOrderTranAcno()) // 🔥 외부에서 받아온 ACNO 사용
+                .orderTranSeq(nextSeq) // 🔥 자동생성된 SEQ 사용
                 .orderTranItemVer(request.getOrderTranItemVer())
                 .orderTranItem(request.getOrderTranItem())
                 .orderTranDeta(request.getOrderTranDeta())
@@ -61,10 +72,10 @@ public class TempWebOrderTranService {
                 .orderTranLdiv(request.getOrderTranLdiv())
                 .orderTranRemark(request.getOrderTranRemark())
                 .orderTranStau(request.getOrderTranStau())
-                .orderTranFdate(request.getOrderTranFdate())
-                .orderTranFuser(request.getOrderTranFuser())
-                .orderTranLdate(request.getOrderTranLdate())
-                .orderTranLuser(request.getOrderTranLuser())
+                .orderTranFdate(now) // 🔥 자동생성된 현재 시간
+                .orderTranFuser(currentUserId) // 🔥 자동생성된 현재 사용자
+                .orderTranLdate(now) // 🔥 자동생성된 현재 시간
+                .orderTranLuser(currentUserId) // 🔥 자동생성된 현재 사용자
                 .orderTranWamt(request.getOrderTranWamt())
                 .userId(currentUserId) // 🔥 자동으로 현재 사용자 ID 설정
                 .send(request.getSend())
@@ -105,13 +116,14 @@ public class TempWebOrderTranService {
                     
                     // 현재 로그인한 사용자 ID 자동 설정
                     String currentUserId = SecurityUtils.getCurrentMemberId();
+                    LocalDateTime now = LocalDateTime.now();
                     
                     TempWebOrderTran updated = TempWebOrderTran.builder()
                             .orderTranDate(request.getOrderTranDate())
                             .orderTranSosok(request.getOrderTranSosok())
                             .orderTranUjcd(request.getOrderTranUjcd())
-                            .orderTranAcno(request.getOrderTranAcno())
-                            .orderTranSeq(request.getOrderTranSeq())
+                            .orderTranAcno(entity.getOrderTranAcno()) // 🔥 기존 entity의 ACNO 사용
+                            .orderTranSeq(entity.getOrderTranSeq()) // 🔥 기존 entity의 SEQ 사용
                             .orderTranItemVer(request.getOrderTranItemVer())
                             .orderTranItem(request.getOrderTranItem())
                             .orderTranDeta(request.getOrderTranDeta())
@@ -137,10 +149,10 @@ public class TempWebOrderTranService {
                             .orderTranLdiv(request.getOrderTranLdiv())
                             .orderTranRemark(request.getOrderTranRemark())
                             .orderTranStau(request.getOrderTranStau())
-                            .orderTranFdate(request.getOrderTranFdate())
-                            .orderTranFuser(request.getOrderTranFuser())
-                            .orderTranLdate(request.getOrderTranLdate())
-                            .orderTranLuser(request.getOrderTranLuser())
+                            .orderTranFdate(entity.getOrderTranFdate()) // 🔥 기존 생성일시 유지
+                            .orderTranFuser(entity.getOrderTranFuser()) // 🔥 기존 생성자 유지
+                            .orderTranLdate(now) // 🔥 자동생성된 수정 시간
+                            .orderTranLuser(currentUserId) // 🔥 자동생성된 수정자
                             .orderTranWamt(request.getOrderTranWamt())
                             .userId(currentUserId) // 🔥 자동으로 현재 사용자 ID 설정
                             .send(request.getSend())
@@ -227,5 +239,13 @@ public class TempWebOrderTranService {
         webOrderTranRepository.save(webEntity);
         
         System.out.println("✅ TempWebOrderTran → WebOrderTran 변환 완료: " + tempEntity.getOrderTranKey() + " (사용자: " + tempEntity.getUserId() + ")");
+    }
+    
+    /**
+     * SEQ 자동 생성 - 해당 주문의 시퀀스 번호
+     */
+    private Integer generateNextSeq(String orderDate, Integer sosok, String ujcd, Integer acno) {
+        Integer maxSeq = tempWebOrderTranRepository.findMaxSeqByOrderKey(orderDate, sosok, ujcd, acno);
+        return maxSeq + 1;
     }
 } 

@@ -1,15 +1,25 @@
 package com.pipebank.ordersystem.domain.web.temp.controller;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderTranCreateRequest;
 import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderTranResponse;
 import com.pipebank.ordersystem.domain.web.temp.entity.TempWebOrderTran;
 import com.pipebank.ordersystem.domain.web.temp.service.TempWebOrderTranService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/web/temp/order-tran")
@@ -109,8 +119,8 @@ public class TempWebOrderTranController {
                                 .orderTranDate(tempOrderTran.getOrderTranDate())
                                 .orderTranSosok(tempOrderTran.getOrderTranSosok())
                                 .orderTranUjcd(tempOrderTran.getOrderTranUjcd())
-                                .orderTranAcno(tempOrderTran.getOrderTranAcno())
-                                .orderTranSeq(tempOrderTran.getOrderTranSeq())
+                                .orderTranAcno(tempOrderTran.getOrderTranAcno()) // 기존 ACNO 사용
+                                // orderTranSeq는 자동생성이므로 제거
                                 .orderTranItemVer(tempOrderTran.getOrderTranItemVer())
                                 .orderTranItem(tempOrderTran.getOrderTranItem())
                                 .orderTranDeta(tempOrderTran.getOrderTranDeta())
@@ -136,10 +146,7 @@ public class TempWebOrderTranController {
                                 .orderTranLdiv(tempOrderTran.getOrderTranLdiv())
                                 .orderTranRemark(tempOrderTran.getOrderTranRemark())
                                 .orderTranStau(tempOrderTran.getOrderTranStau())
-                                .orderTranFdate(tempOrderTran.getOrderTranFdate())
-                                .orderTranFuser(tempOrderTran.getOrderTranFuser())
-                                .orderTranLdate(tempOrderTran.getOrderTranLdate())
-                                .orderTranLuser(tempOrderTran.getOrderTranLuser())
+                                // orderTranFdate, orderTranFuser, orderTranLdate, orderTranLuser는 자동생성
                                 .orderTranWamt(tempOrderTran.getOrderTranWamt())
                                 .send(true) // 핵심: send를 true로 변경
                                 .build();

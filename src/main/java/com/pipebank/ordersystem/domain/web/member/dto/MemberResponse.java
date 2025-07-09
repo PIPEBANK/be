@@ -23,7 +23,9 @@ public class MemberResponse {
     private String custCodeUname1;   // 담당자명
     private String custCodeUtel1;    // 담당자 전화번호
     private String custCodeAddr;     // 주소
-    private String custCodeEmail;    // 이메일        // 거래처명 추가
+    private String custCodeEmail;    // 이메일
+    private Integer custCodeSawon;   // 담당 사원번호
+    private Integer custCodeBuse;    // 담당 부서번호
     private Boolean useYn;
     private MemberRole role;
     private String roleDescription;

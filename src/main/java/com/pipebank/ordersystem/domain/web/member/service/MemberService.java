@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pipebank.ordersystem.domain.erp.repository.CustomerRepository;
 import com.pipebank.ordersystem.domain.web.member.dto.MemberCreateRequest;
 import com.pipebank.ordersystem.domain.web.member.dto.MemberResponse;
 import com.pipebank.ordersystem.domain.web.member.dto.MemberUpdateRequest;
@@ -17,7 +18,6 @@ import com.pipebank.ordersystem.domain.web.member.dto.PasswordChangeRequest;
 import com.pipebank.ordersystem.domain.web.member.entity.Member;
 import com.pipebank.ordersystem.domain.web.member.entity.MemberRole;
 import com.pipebank.ordersystem.domain.web.member.repository.MemberRepository;
-import com.pipebank.ordersystem.domain.erp.repository.CustomerRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -240,6 +240,8 @@ public class MemberService {
                                 response.setCustCodeUtel1(customer.getCustCodeUtel1());
                                 response.setCustCodeAddr(customer.getCustCodeAddr());
                                 response.setCustCodeEmail(customer.getCustCodeEmail());
+                                response.setCustCodeSawon(customer.getCustCodeSawon()); // 담당 사원번호 추가
+                                response.setCustCodeBuse(customer.getCustCodeBuse());   // 담당 부서번호 추가
                             },
                             () -> response.setCustCodeName("거래처 정보 없음")
                         );

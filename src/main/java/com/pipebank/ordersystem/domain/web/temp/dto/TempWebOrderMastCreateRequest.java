@@ -1,13 +1,12 @@
 package com.pipebank.ordersystem.domain.web.temp.dto;
 
+import java.util.List;
+
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.AllArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -20,7 +19,7 @@ public class TempWebOrderMastCreateRequest {
     private String orderMastDate;
     private Integer orderMastSosok;
     private String orderMastUjcd;
-    private Integer orderMastAcno;
+    // orderMastAcno는 자동생성되므로 제거
     
     // 기본 필드들
     private Integer orderMastCust;
@@ -30,10 +29,7 @@ public class TempWebOrderMastCreateRequest {
     private String orderMastOdate;
     private Integer orderMastProject;
     private String orderMastRemark;
-    private LocalDateTime orderMastFdate;
-    private String orderMastFuser;
-    private LocalDateTime orderMastLdate;
-    private String orderMastLuser;
+    // orderMastFdate, orderMastFuser, orderMastLdate, orderMastLuser는 자동생성
     private String orderMastComaddr1;
     private String orderMastComaddr2;
     private String orderMastComname;
@@ -52,4 +48,7 @@ public class TempWebOrderMastCreateRequest {
     private String userId;
     @Builder.Default
     private Boolean send = false; // 기본값: 임시저장
+    
+    // Mast와 Tran을 한 번에 처리하기 위한 필드
+    private List<TempWebOrderTranCreateRequest> orderTrans;
 } 

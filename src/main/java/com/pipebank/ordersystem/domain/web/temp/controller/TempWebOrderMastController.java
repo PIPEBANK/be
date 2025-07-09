@@ -1,15 +1,25 @@
 package com.pipebank.ordersystem.domain.web.temp.controller;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderMastCreateRequest;
 import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderMastResponse;
 import com.pipebank.ordersystem.domain.web.temp.entity.TempWebOrderMast;
 import com.pipebank.ordersystem.domain.web.temp.service.TempWebOrderMastService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/web/temp/order-mast")
@@ -22,6 +32,13 @@ public class TempWebOrderMastController {
     @PostMapping
     public ResponseEntity<TempWebOrderMastResponse> create(@RequestBody TempWebOrderMastCreateRequest request) {
         TempWebOrderMastResponse response = tempWebOrderMastService.create(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // 통합 생성 (Mast + Tran 한 번에 처리) - 새로 추가
+    @PostMapping("/with-trans")
+    public ResponseEntity<TempWebOrderMastResponse> createWithTrans(@RequestBody TempWebOrderMastCreateRequest request) {
+        TempWebOrderMastResponse response = tempWebOrderMastService.createWithTrans(request);
         return ResponseEntity.ok(response);
     }
 
@@ -105,7 +122,7 @@ public class TempWebOrderMastController {
                                 .orderMastDate(tempOrder.getOrderMastDate())
                                 .orderMastSosok(tempOrder.getOrderMastSosok())
                                 .orderMastUjcd(tempOrder.getOrderMastUjcd())
-                                .orderMastAcno(tempOrder.getOrderMastAcno())
+                                // orderMastAcno는 자동생성이므로 제거
                                 .orderMastCust(tempOrder.getOrderMastCust())
                                 .orderMastScust(tempOrder.getOrderMastScust())
                                 .orderMastSawon(tempOrder.getOrderMastSawon())
@@ -113,10 +130,7 @@ public class TempWebOrderMastController {
                                 .orderMastOdate(tempOrder.getOrderMastOdate())
                                 .orderMastProject(tempOrder.getOrderMastProject())
                                 .orderMastRemark(tempOrder.getOrderMastRemark())
-                                .orderMastFdate(tempOrder.getOrderMastFdate())
-                                .orderMastFuser(tempOrder.getOrderMastFuser())
-                                .orderMastLdate(tempOrder.getOrderMastLdate())
-                                .orderMastLuser(tempOrder.getOrderMastLuser())
+                                // 날짜/사용자 필드들은 자동생성되므로 제거
                                 .orderMastComaddr1(tempOrder.getOrderMastComaddr1())
                                 .orderMastComaddr2(tempOrder.getOrderMastComaddr2())
                                 .orderMastComname(tempOrder.getOrderMastComname())
