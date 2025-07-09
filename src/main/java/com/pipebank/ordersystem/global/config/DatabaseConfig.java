@@ -84,10 +84,10 @@ public class DatabaseConfig {
         return props;
     }
 
-    // ERP DB JPA 속성 설정 (안전하게)
+    // ERP DB JPA 속성 설정 (테스트 환경에서 저장 가능)
     private java.util.Map<String, Object> erpJpaProperties() {
         java.util.Map<String, Object> props = new java.util.HashMap<>();
-        props.put("hibernate.hbm2ddl.auto", "validate");  // ERP DB는 검증만, 변경 안함
+        props.put("hibernate.hbm2ddl.auto", "update");  // ERP DB 테스트 환경에서 저장 가능
         props.put("hibernate.show_sql", "true");
         props.put("hibernate.format_sql", "true");
         props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");

@@ -1,27 +1,5 @@
 package com.pipebank.ordersystem.domain.erp.service;
 
-import com.pipebank.ordersystem.domain.erp.dto.OrderMastResponse;
-import com.pipebank.ordersystem.domain.erp.dto.OrderMastListResponse;
-import com.pipebank.ordersystem.domain.erp.dto.OrderDetailResponse;
-import com.pipebank.ordersystem.domain.erp.dto.OrderShipmentResponse;
-import com.pipebank.ordersystem.domain.erp.dto.OrderTranDetailResponse;
-import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
-import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
-import com.pipebank.ordersystem.domain.erp.entity.ShipOrder;
-import com.pipebank.ordersystem.domain.erp.entity.ShipTran;
-import com.pipebank.ordersystem.domain.erp.repository.OrderMastRepository;
-import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
-import com.pipebank.ordersystem.domain.erp.repository.ShipOrderRepository;
-import com.pipebank.ordersystem.domain.erp.repository.ShipTranRepository;
-import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,9 +9,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pipebank.ordersystem.domain.erp.dto.OrderDetailResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderMastListResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderMastResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderShipmentResponse;
+import com.pipebank.ordersystem.domain.erp.dto.OrderTranDetailResponse;
+import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
+import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
+import com.pipebank.ordersystem.domain.erp.entity.ShipOrder;
+import com.pipebank.ordersystem.domain.erp.entity.ShipTran;
+import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
+import com.pipebank.ordersystem.domain.erp.repository.OrderMastRepository;
+import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ShipOrderRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ShipTranRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true, transactionManager = "erpTransactionManager")
+@Transactional(transactionManager = "erpTransactionManager")
 @Slf4j
 public class OrderMastService {
 
@@ -48,6 +50,7 @@ public class OrderMastService {
     /**
      * 복합키로 주문 조회
      */
+    @Transactional(readOnly = true, transactionManager = "erpTransactionManager")
     public OrderMastResponse getOrderMast(String orderMastDate, Integer orderMastSosok, 
                                          String orderMastUjcd, Integer orderMastAcno) {
         log.info("주문 조회 요청 - 날짜: {}, 소속: {}, 업장: {}, 계정: {}", 
@@ -592,7 +595,7 @@ public class OrderMastService {
      * OrderDetailResponse에 코드 표시명 추가
      */
     private OrderDetailResponse addDisplayNames(OrderDetailResponse response, OrderMast orderMast) {
-        // 출고형태명
+        // 출고형태명 조회
         String sdivDisplayName = "";
         if (orderMast.getOrderMastSdiv() != null && !orderMast.getOrderMastSdiv().trim().isEmpty()) {
             try {
@@ -602,7 +605,7 @@ public class OrderMastService {
             }
         }
         
-        // 화폐코드명
+        // 화폐코드명 조회
         String currencyDisplayName = "";
         if (orderMast.getOrderMastCurrency() != null && !orderMast.getOrderMastCurrency().trim().isEmpty()) {
             try {
@@ -612,7 +615,7 @@ public class OrderMastService {
             }
         }
         
-        // 용도코드명
+        // 용도코드명 조회
         String reasonDisplayName = "";
         if (orderMast.getOrderMastReason() != null && !orderMast.getOrderMastReason().trim().isEmpty()) {
             try {
@@ -1226,5 +1229,60 @@ public class OrderMastService {
         }
         
         return statusMap;
+    }
+    
+    // =================== ERP DB 저장 메서드들 ===================
+    
+    /**
+     * WebOrderMast를 ERP OrderMast로 저장
+     */
+    public OrderMast saveOrderMastFromWeb(com.pipebank.ordersystem.domain.web.order.entity.WebOrderMast webOrderMast) {
+        log.info("WebOrderMast를 ERP OrderMast로 저장 시작: {}", webOrderMast.getOrderKey());
+        
+        // WebOrderMast의 데이터를 ERP OrderMast로 변환
+        OrderMast erpOrderMast = OrderMast.builder()
+                .orderMastDate(webOrderMast.getOrderMastDate())
+                .orderMastSosok(webOrderMast.getOrderMastSosok())
+                .orderMastUjcd(webOrderMast.getOrderMastUjcd())
+                .orderMastAcno(webOrderMast.getOrderMastAcno())
+                .orderMastCust(webOrderMast.getOrderMastCust())
+                .orderMastScust(webOrderMast.getOrderMastScust())
+                .orderMastSawon(webOrderMast.getOrderMastSawon())
+                .orderMastSawonBuse(webOrderMast.getOrderMastSawonBuse())
+                .orderMastOdate(webOrderMast.getOrderMastOdate())
+                .orderMastProject(webOrderMast.getOrderMastProject())
+                .orderMastRemark(webOrderMast.getOrderMastRemark())
+                .orderMastFdate(webOrderMast.getOrderMastFdate())
+                .orderMastFuser(webOrderMast.getOrderMastFuser())
+                .orderMastLdate(webOrderMast.getOrderMastLdate())
+                .orderMastLuser(webOrderMast.getOrderMastLuser())
+                .orderMastComaddr1(webOrderMast.getOrderMastComaddr1())
+                .orderMastComaddr2(webOrderMast.getOrderMastComaddr2())
+                .orderMastComname(webOrderMast.getOrderMastComname())
+                .orderMastComuname(webOrderMast.getOrderMastComuname())
+                .orderMastComutel(webOrderMast.getOrderMastComutel())
+                .orderMastReason(webOrderMast.getOrderMastReason())
+                .orderMastTcomdiv(webOrderMast.getOrderMastTcomdiv())
+                .orderMastCurrency(webOrderMast.getOrderMastCurrency())
+                .orderMastCurrencyPer(webOrderMast.getOrderMastCurrencyPer())
+                .orderMastSdiv(webOrderMast.getOrderMastSdiv())
+                .orderMastDcust(webOrderMast.getOrderMastDcust())
+                .orderMastIntype(webOrderMast.getOrderMastIntype())
+                .orderMastOtime(webOrderMast.getOrderMastOtime())
+                .build();
+
+        OrderMast saved = orderMastRepository.save(erpOrderMast);
+        log.info("✅ ERP OrderMast 저장 완료: {}", saved.getOrderKey());
+        
+        return saved;
+    }
+
+    /**
+     * 복합키 존재 여부 확인
+     */
+    @Transactional(readOnly = true, transactionManager = "erpTransactionManager")
+    public boolean existsOrderMast(String orderMastDate, Integer orderMastSosok, String orderMastUjcd, Integer orderMastAcno) {
+        OrderMast.OrderMastId id = new OrderMast.OrderMastId(orderMastDate, orderMastSosok, orderMastUjcd, orderMastAcno);
+        return orderMastRepository.existsById(id);
     }
 } 

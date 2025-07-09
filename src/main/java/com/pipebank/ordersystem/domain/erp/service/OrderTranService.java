@@ -1,21 +1,23 @@
 package com.pipebank.ordersystem.domain.erp.service;
 
-import com.pipebank.ordersystem.domain.erp.dto.OrderTranResponse;
-import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
-import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.pipebank.ordersystem.domain.erp.dto.OrderTranResponse;
+import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
+import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true, transactionManager = "erpTransactionManager")
+@Transactional(transactionManager = "erpTransactionManager")
 @Slf4j
 public class OrderTranService {
 
@@ -348,5 +350,68 @@ public class OrderTranService {
         private final long totalOrderTrans;
         private final long todayOrderTrans;
         private final long monthOrderTrans;
+    }
+    
+    // =================== ERP DB 저장 메서드들 ===================
+    
+    /**
+     * WebOrderTran을 ERP OrderTran으로 저장
+     */
+    public OrderTran saveOrderTranFromWeb(com.pipebank.ordersystem.domain.web.order.entity.WebOrderTran webOrderTran) {
+        log.info("WebOrderTran을 ERP OrderTran으로 저장 시작: {}", webOrderTran.getOrderTranKey());
+        
+        // WebOrderTran의 데이터를 ERP OrderTran으로 변환
+        OrderTran erpOrderTran = OrderTran.builder()
+                .orderTranDate(webOrderTran.getOrderTranDate())
+                .orderTranSosok(webOrderTran.getOrderTranSosok())
+                .orderTranUjcd(webOrderTran.getOrderTranUjcd())
+                .orderTranAcno(webOrderTran.getOrderTranAcno())
+                .orderTranSeq(webOrderTran.getOrderTranSeq())
+                .orderTranItemVer(webOrderTran.getOrderTranItemVer())
+                .orderTranItem(webOrderTran.getOrderTranItem())
+                .orderTranDeta(webOrderTran.getOrderTranDeta())
+                .orderTranSpec(webOrderTran.getOrderTranSpec())
+                .orderTranUnit(webOrderTran.getOrderTranUnit())
+                .orderTranCalc(webOrderTran.getOrderTranCalc())
+                .orderTranVdiv(webOrderTran.getOrderTranVdiv())
+                .orderTranAdiv(webOrderTran.getOrderTranAdiv())
+                .orderTranRate(webOrderTran.getOrderTranRate())
+                .orderTranCnt(webOrderTran.getOrderTranCnt())
+                .orderTranConvertWeight(webOrderTran.getOrderTranConvertWeight())
+                .orderTranDcPer(webOrderTran.getOrderTranDcPer())
+                .orderTranDcAmt(webOrderTran.getOrderTranDcAmt())
+                .orderTranForiAmt(webOrderTran.getOrderTranForiAmt())
+                .orderTranAmt(webOrderTran.getOrderTranAmt())
+                .orderTranNet(webOrderTran.getOrderTranNet())
+                .orderTranVat(webOrderTran.getOrderTranVat())
+                .orderTranAdv(webOrderTran.getOrderTranAdv())
+                .orderTranTot(webOrderTran.getOrderTranTot())
+                .orderTranLrate(webOrderTran.getOrderTranLrate())
+                .orderTranPrice(webOrderTran.getOrderTranPrice())
+                .orderTranPrice2(webOrderTran.getOrderTranPrice2())
+                .orderTranLdiv(webOrderTran.getOrderTranLdiv())
+                .orderTranRemark(webOrderTran.getOrderTranRemark())
+                .orderTranStau(webOrderTran.getOrderTranStau())
+                .orderTranFdate(webOrderTran.getOrderTranFdate())
+                .orderTranFuser(webOrderTran.getOrderTranFuser())
+                .orderTranLdate(webOrderTran.getOrderTranLdate())
+                .orderTranLuser(webOrderTran.getOrderTranLuser())
+                .orderTranWamt(webOrderTran.getOrderTranWamt())
+                .build();
+
+        OrderTran saved = orderTranRepository.save(erpOrderTran);
+        log.info("✅ ERP OrderTran 저장 완료: {}", saved.getOrderTranKey());
+        
+        return saved;
+    }
+
+    /**
+     * OrderTran 복합키 존재 여부 확인
+     */
+    @Transactional(readOnly = true, transactionManager = "erpTransactionManager")
+    public boolean existsOrderTran(String orderTranDate, Integer orderTranSosok, String orderTranUjcd, 
+                                  Integer orderTranAcno, Integer orderTranSeq) {
+        OrderTran.OrderTranId id = new OrderTran.OrderTranId(orderTranDate, orderTranSosok, orderTranUjcd, orderTranAcno, orderTranSeq);
+        return orderTranRepository.existsById(id);
     }
 } 
