@@ -31,6 +31,11 @@ public interface CustomerRepository extends JpaRepository<Customer, Integer> {
     @Query("SELECT c FROM Customer c WHERE c.custCodeUseAcc = 1")
     Page<Customer> findActiveCustomers(Pageable pageable);
     
+    // 활성 거래처 통합검색 (거래처명 또는 사업자등록번호)
+    @Query("SELECT c FROM Customer c WHERE c.custCodeUseAcc = 1 AND " +
+           "(c.custCodeName LIKE %:search% OR c.custCodeSano LIKE %:search%)")
+    Page<Customer> findActiveCustomersWithSearch(@Param("search") String search, Pageable pageable);
+    
     // 구매 가능한 거래처 조회
     @Query("SELECT c FROM Customer c WHERE c.custCodeUsePur = 1")
     List<Customer> findPurchaseableCustomers();

@@ -114,6 +114,28 @@ public class CustomerService {
     }
 
     /**
+     * 활성 거래처 목록 조회 (페이징 + 통합검색)
+     * 검색어로 거래처명 또는 사업자등록번호 검색
+     */
+    public Page<CustomerResponse> getActiveCustomersWithSearch(String search, Pageable pageable) {
+        log.info("활성 거래처 통합검색 요청 - 검색어: {}, 페이지: {}, 크기: {}", 
+                search, pageable.getPageNumber(), pageable.getPageSize());
+        
+        Page<Customer> customers;
+        
+        if (search == null || search.trim().isEmpty()) {
+            // 검색어가 없으면 전체 활성 거래처 조회
+            customers = customerRepository.findActiveCustomers(pageable);
+        } else {
+            // 검색어가 있으면 거래처명 또는 사업자등록번호로 검색
+            customers = customerRepository.findActiveCustomersWithSearch(search.trim(), pageable);
+        }
+        
+        log.info("활성 거래처 통합검색 완료 - 검색어: {}, 총 {}건", search, customers.getTotalElements());
+        return customers.map(this::convertToResponse);
+    }
+
+    /**
      * 구매 가능한 거래처 목록 조회
      */
     public List<CustomerResponse> getPurchaseableCustomers() {

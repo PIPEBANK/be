@@ -73,22 +73,23 @@ public class CustomerController {
     }
 
     /**
-     * 활성 거래처 목록 조회 (페이징)
+     * 활성 거래처 목록 조회 (페이징 + 통합검색)
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<Page<CustomerResponse>> getActiveCustomers(
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "custCodeCode") String sort,
             @RequestParam(defaultValue = "asc") String direction) {
         
-        log.info("활성 거래처 목록 조회 API 호출 - 페이지: {}, 크기: {}", page, size);
+        log.info("활성 거래처 목록 조회 API 호출 - 검색어: {}, 페이지: {}, 크기: {}", search, page, size);
         
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
         
-        Page<CustomerResponse> response = customerService.getActiveCustomers(pageable);
+        Page<CustomerResponse> response = customerService.getActiveCustomersWithSearch(search, pageable);
         return ResponseEntity.ok(response);
     }
 
