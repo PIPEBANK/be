@@ -18,6 +18,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Integer> {
     // 거래처 번호로 조회
     Optional<Customer> findByCustCodeNum(String custCodeNum);
     
+    // 사업자번호로 조회
+    Optional<Customer> findByCustCodeSano(String custCodeSano);
+    
     // 거래처 이름으로 조회
     List<Customer> findByCustCodeNameContaining(String custCodeName);
     

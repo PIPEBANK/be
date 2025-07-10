@@ -62,6 +62,26 @@ public class CustomerService {
     }
 
     /**
+     * 거래처 조회 (사업자번호)
+     */
+    public String getCustCodeBySano(String custCodeSano) {
+        log.info("거래처 조회 요청 - 사업자번호: {}", custCodeSano);
+        
+        Customer customer = customerRepository.findByCustCodeSano(custCodeSano)
+                .orElse(null);
+        
+        if (customer == null) {
+            log.warn("존재하지 않는 사업자번호입니다: {}", custCodeSano);
+            return null;
+        }
+        
+        log.info("거래처 조회 완료 - 사업자번호: {}, 거래처코드: {}, 이름: {}", 
+                custCodeSano, customer.getCustCodeCode(), customer.getDisplayName());
+        
+        return customer.getCustCodeCode().toString();
+    }
+
+    /**
      * Customer Entity를 CustomerResponse로 변환 (DCOD 표시명 포함)
      */
     private CustomerResponse convertToResponse(Customer customer) {

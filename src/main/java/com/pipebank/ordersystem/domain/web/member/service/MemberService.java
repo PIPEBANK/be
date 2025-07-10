@@ -1,9 +1,8 @@
 package com.pipebank.ordersystem.domain.web.member.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pipebank.ordersystem.domain.erp.repository.CustomerRepository;
+import com.pipebank.ordersystem.domain.erp.service.CustomerService;
 import com.pipebank.ordersystem.domain.web.member.dto.MemberCreateRequest;
 import com.pipebank.ordersystem.domain.web.member.dto.MemberResponse;
 import com.pipebank.ordersystem.domain.web.member.dto.MemberUpdateRequest;
@@ -18,6 +18,7 @@ import com.pipebank.ordersystem.domain.web.member.dto.PasswordChangeRequest;
 import com.pipebank.ordersystem.domain.web.member.entity.Member;
 import com.pipebank.ordersystem.domain.web.member.entity.MemberRole;
 import com.pipebank.ordersystem.domain.web.member.repository.MemberRepository;
+import com.pipebank.ordersystem.global.auth.dto.FindMemberIdResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,13 +31,13 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final CustomerRepository customerRepository;
+    private final CustomerService customerService;
     private final PasswordEncoder passwordEncoder;
 
     /**
      * 회원 생성
      */
     @Transactional
-    @CacheEvict(value = "members", allEntries = true)
     public MemberResponse createMember(MemberCreateRequest request) {
         log.info("회원 생성 요청 - ID: {}, 이름: {}", request.getMemberId(), request.getMemberName());
 
@@ -67,7 +68,6 @@ public class MemberService {
     /**
      * 회원 조회 (ID)
      */
-    @Cacheable(value = "members", key = "#memberId")
     public MemberResponse getMember(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다: " + memberId));
@@ -77,7 +77,6 @@ public class MemberService {
     /**
      * 회원 조회 (회원 ID)
      */
-    @Cacheable(value = "members", key = "#memberId")
     public MemberResponse getMemberByMemberId(String memberId) {
         Member member = memberRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원 ID입니다: " + memberId));
@@ -94,21 +93,74 @@ public class MemberService {
     }
 
     /**
+     * 회원 ID 찾기 (회원명 + 사업자번호)
+     */
+    public FindMemberIdResponse findMemberId(String memberName, String custCodeSano) {
+        log.info("회원 ID 찾기 요청 - 회원명: {}, 사업자번호: {}", memberName, custCodeSano);
+        
+        // 1. 사업자번호로 거래처 코드 조회
+        String custCode = customerService.getCustCodeBySano(custCodeSano);
+        if (custCode == null) {
+            log.warn("회원 ID 찾기 실패 - 존재하지 않는 사업자번호: {}", custCodeSano);
+            throw new IllegalArgumentException("존재하지 않는 사업자번호입니다: " + custCodeSano);
+        }
+        
+        // 2. 회원명과 거래처코드로 회원 조회
+        Member member = memberRepository.findByMemberNameAndCustCode(memberName, custCode)
+                .orElseThrow(() -> {
+                    log.warn("회원 ID 찾기 실패 - 회원명: {}, 거래처코드: {}", memberName, custCode);
+                    return new IllegalArgumentException("해당 조건에 맞는 회원을 찾을 수 없습니다.");
+                });
+        
+        // 3. 비활성화된 회원 체크
+        if (!member.isActive()) {
+            log.warn("회원 ID 찾기 실패 - 비활성화된 회원: {}", member.getMemberId());
+            throw new IllegalArgumentException("비활성화된 회원입니다.");
+        }
+        
+        log.info("회원 ID 찾기 성공 - 회원명: {}, 회원ID: {}", memberName, member.getMemberId());
+        return FindMemberIdResponse.of(member.getMemberId(), member.getMemberName());
+    }
+
+    /**
      * 회원 목록 조회 (페이징)
      */
-    @Cacheable(value = "memberList")
     public Page<MemberResponse> getMembers(Pageable pageable) {
         return memberRepository.findAll(pageable)
                 .map(this::convertToResponseWithCustName);
     }
 
     /**
-     * 조건별 회원 검색
+     * 조건별 회원 검색 (거래처명 검색 최적화 - 애플리케이션 레벨)
      */
-    public Page<MemberResponse> searchMembers(String memberId, String memberName, String custCode,
+    public Page<MemberResponse> searchMembers(String memberId, String memberName, String custCodeName,
                                              MemberRole role, Boolean useYn, Pageable pageable) {
-        return memberRepository.findMembersWithConditions(memberId, memberName, custCode, role, useYn, pageable)
-                .map(MemberResponse::from);
+        
+        // 거래처명 검색이 없으면 기본 DB 페이징 사용 (최적화)
+        if (custCodeName == null || custCodeName.trim().isEmpty()) {
+            Page<Member> memberPage = memberRepository.findMembersWithConditions(
+                memberId, memberName, null, role, useYn, pageable);
+            return memberPage.map(this::convertToResponseWithCustName);
+        }
+        
+        // 거래처명 검색이 있는 경우: 효율적인 방식으로 처리
+        // 1. 먼저 거래처명으로 custCode 목록을 조회 (ERP DB)
+        List<Integer> matchingCustCodes = customerRepository.findAll().stream()
+                .filter(customer -> customer.getCustCodeName() != null && 
+                       customer.getCustCodeName().toLowerCase().contains(custCodeName.toLowerCase()))
+                .map(customer -> customer.getCustCodeCode())
+                .collect(Collectors.toList());
+        
+        if (matchingCustCodes.isEmpty()) {
+            // 일치하는 거래처가 없으면 빈 페이지 반환
+            return Page.empty(pageable);
+        }
+        
+        // 2. custCode 목록으로 회원 검색 (Web DB) - 효율적인 IN 쿼리 사용
+        Page<Member> memberPage = memberRepository.findMembersWithCustCodes(
+            memberId, memberName, matchingCustCodes, role, useYn, pageable);
+        
+        return memberPage.map(this::convertToResponseWithCustName);
     }
 
     /**
@@ -128,7 +180,6 @@ public class MemberService {
      * 회원 정보 수정
      */
     @Transactional
-    @CacheEvict(value = {"members", "memberList"}, allEntries = true)
     public MemberResponse updateMember(Long memberId, MemberUpdateRequest request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다: " + memberId));
@@ -151,7 +202,6 @@ public class MemberService {
      * 비밀번호 변경
      */
     @Transactional
-    @CacheEvict(value = "members", key = "#memberId")
     public void changePassword(Long memberId, PasswordChangeRequest request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다: " + memberId));
@@ -174,10 +224,25 @@ public class MemberService {
     }
 
     /**
+     * 비밀번호 초기화 (관리자만) - 초기 비밀번호 '12345678'로 설정
+     */
+    @Transactional
+    public void resetPassword(Long memberId, String updateBy) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다: " + memberId));
+
+        // 초기 비밀번호 '12345678'로 암호화하여 설정
+        String defaultPassword = "12345678";
+        String encodedPassword = passwordEncoder.encode(defaultPassword);
+        member.updatePassword(encodedPassword, updateBy);
+
+        log.info("비밀번호 초기화 완료 - 회원 ID: {} (초기화자: {})", member.getMemberId(), updateBy);
+    }
+
+    /**
      * 회원 삭제 (비활성화)
      */
     @Transactional
-    @CacheEvict(value = {"members", "memberList"}, allEntries = true)
     public void deactivateMember(Long memberId, String updateBy) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다: " + memberId));
@@ -190,7 +255,6 @@ public class MemberService {
      * 회원 완전 삭제
      */
     @Transactional
-    @CacheEvict(value = {"members", "memberList"}, allEntries = true)
     public void deleteMember(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다: " + memberId));

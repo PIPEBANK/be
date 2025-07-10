@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pipebank.ordersystem.domain.web.member.service.MemberService;
+import com.pipebank.ordersystem.global.auth.dto.FindMemberIdRequest;
+import com.pipebank.ordersystem.global.auth.dto.FindMemberIdResponse;
 import com.pipebank.ordersystem.global.auth.dto.LoginRequest;
 import com.pipebank.ordersystem.global.auth.dto.TokenResponse;
 import com.pipebank.ordersystem.global.auth.service.AuthService;
@@ -24,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
     private final AuthService authService;
+    private final MemberService memberService;
 
     /**
      * 로그인
@@ -32,6 +36,15 @@ public class AuthController {
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         TokenResponse tokenResponse = authService.login(loginRequest);
         return ResponseEntity.ok(tokenResponse);
+    }
+
+    /**
+     * 회원 ID 찾기 (회원명 + 사업자번호)
+     */
+    @PostMapping("/find-member-id")
+    public ResponseEntity<FindMemberIdResponse> findMemberId(@Valid @RequestBody FindMemberIdRequest request) {
+        FindMemberIdResponse response = memberService.findMemberId(request.getMemberName(), request.getCustCodeSano());
+        return ResponseEntity.ok(response);
     }
 
     /**

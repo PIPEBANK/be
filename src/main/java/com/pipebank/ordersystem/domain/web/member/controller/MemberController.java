@@ -81,32 +81,14 @@ public class MemberController {
     }
 
     /**
-     * 회원 목록 조회 (관리자만)
+     * 회원 목록 조회 (관리자만) - 페이징, 검색, 필터 통합
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<MemberResponse>> getMembers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "createDate") String sort,
-            @RequestParam(defaultValue = "desc") String direction) {
-        
-        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
-        
-        Page<MemberResponse> response = memberService.getMembers(pageable);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 회원 검색 (관리자만)
-     */
-    @GetMapping("/search")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<MemberResponse>> searchMembers(
             @RequestParam(required = false) String memberId,
             @RequestParam(required = false) String memberName,
-            @RequestParam(required = false) String custCode,
+            @RequestParam(required = false) String custCodeName,
             @RequestParam(required = false) MemberRole role,
             @RequestParam(required = false) Boolean useYn,
             @RequestParam(defaultValue = "0") int page,
@@ -118,8 +100,29 @@ public class MemberController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
         
         Page<MemberResponse> response = memberService.searchMembers(
-            memberId, memberName, custCode, role, useYn, pageable);
+            memberId, memberName, custCodeName, role, useYn, pageable);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 회원 검색 (관리자만) - DEPRECATED: 기본 목록 조회 API로 통합됨
+     */
+    @GetMapping("/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Deprecated
+    public ResponseEntity<Page<MemberResponse>> searchMembers(
+            @RequestParam(required = false) String memberId,
+            @RequestParam(required = false) String memberName,
+            @RequestParam(required = false) String custCode,
+            @RequestParam(required = false) MemberRole role,
+            @RequestParam(required = false) Boolean useYn,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createDate") String sort,
+            @RequestParam(defaultValue = "desc") String direction) {
+        
+        // 기본 목록 조회 API로 리다이렉트
+        return getMembers(memberId, memberName, null, role, useYn, page, size, sort, direction);
     }
 
     /**
@@ -167,6 +170,20 @@ public class MemberController {
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "비밀번호가 성공적으로 변경되었습니다");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 비밀번호 초기화 (관리자만) - 초기 비밀번호 '12345678'로 설정
+     */
+    @PutMapping("/{id}/password/reset")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> resetPassword(@PathVariable Long id,
+                                                            @AuthenticationPrincipal UserDetails userDetails) {
+        memberService.resetPassword(id, userDetails.getUsername());
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "비밀번호가 초기값(12345678)으로 초기화되었습니다");
         return ResponseEntity.ok(response);
     }
 
