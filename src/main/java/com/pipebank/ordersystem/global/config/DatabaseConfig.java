@@ -78,8 +78,8 @@ public class DatabaseConfig {
     private java.util.Map<String, Object> webJpaProperties() {
         java.util.Map<String, Object> props = new java.util.HashMap<>();
         props.put("hibernate.hbm2ddl.auto", "update");  // Web DB는 자유롭게 수정 가능
-        props.put("hibernate.show_sql", "true");
-        props.put("hibernate.format_sql", "true");
+        props.put("hibernate.show_sql", "false");
+        props.put("hibernate.format_sql", "false");
         props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
         return props;
     }
@@ -88,8 +88,8 @@ public class DatabaseConfig {
     private java.util.Map<String, Object> erpJpaProperties() {
         java.util.Map<String, Object> props = new java.util.HashMap<>();
         props.put("hibernate.hbm2ddl.auto", "validate");  // ERP DB 읽기 전용 - 기존 스키마 검증만
-        props.put("hibernate.show_sql", "true");
-        props.put("hibernate.format_sql", "true");
+        props.put("hibernate.show_sql", "false");
+        props.put("hibernate.format_sql", "false");
         props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
         return props;
     }
