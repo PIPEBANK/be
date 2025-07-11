@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +16,7 @@ import com.pipebank.ordersystem.domain.web.order.entity.WebOrderTran;
 import com.pipebank.ordersystem.domain.web.order.repository.WebOrderMastRepository;
 import com.pipebank.ordersystem.domain.web.order.repository.WebOrderTranRepository;
 import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderMastCreateRequest;
+import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderMastListResponse;
 import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderMastResponse;
 import com.pipebank.ordersystem.domain.web.temp.dto.TempWebOrderTranCreateRequest;
 import com.pipebank.ordersystem.domain.web.temp.entity.TempWebOrderMast;
@@ -196,6 +199,30 @@ public class TempWebOrderMastService {
     public Optional<TempWebOrderMastResponse> findById(TempWebOrderMast.TempWebOrderMastId id) {
         return tempWebOrderMastRepository.findById(id)
                 .map(TempWebOrderMastResponse::from);
+    }
+
+    /**
+     * 거래처별 임시저장 주문 목록 조회 (페이징 + 필터링)
+     * - send = false인 것만 조회
+     * - 주문번호, 작성자, 현장명, 주문일자만 응답
+     */
+    public Page<TempWebOrderMastListResponse> getTempOrdersByCustomerWithFilters(
+            Integer custId, String orderDate, String startDate, String endDate,
+            String orderNumber, String userId, String comName, Pageable pageable) {
+        
+        Page<TempWebOrderMast> tempOrders = tempWebOrderMastRepository.findByCustomerWithFilters(
+                custId, orderDate, startDate, endDate, orderNumber, userId, comName, pageable);
+        
+        return tempOrders.map(TempWebOrderMastListResponse::from);
+    }
+
+    /**
+     * 거래처별 임시저장 주문 기본 목록 조회 (페이징만)
+     * - send = false인 것만 조회
+     */
+    public Page<TempWebOrderMastListResponse> getTempOrdersByCustomer(Integer custId, Pageable pageable) {
+        Page<TempWebOrderMast> tempOrders = tempWebOrderMastRepository.findByOrderMastCustAndSendFalse(custId, pageable);
+        return tempOrders.map(TempWebOrderMastListResponse::from);
     }
 
     // 수정
