@@ -1,5 +1,7 @@
 package com.pipebank.ordersystem.domain.web.temp.repository;
 
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -52,4 +54,13 @@ public interface TempWebOrderMastRepository extends JpaRepository<TempWebOrderMa
            "t.orderMastCust = :custId " +
            "ORDER BY t.orderMastDate DESC, t.orderMastAcno DESC")
     Page<TempWebOrderMast> findByOrderMastCustAndSendFalse(@Param("custId") Integer custId, Pageable pageable);
+    
+    /**
+     * 주문번호(orderNumber)로 조회 - DATE와 ACNO로 검색
+     * orderNumber 형식: "YYYYMMDD-숫자" (예: "20250710-1")
+     */
+    @Query("SELECT t FROM TempWebOrderMast t WHERE " +
+           "t.orderMastDate = :orderDate AND t.orderMastAcno = :acno")
+    Optional<TempWebOrderMast> findByOrderNumber(@Param("orderDate") String orderDate, 
+                                               @Param("acno") Integer acno);
 } 

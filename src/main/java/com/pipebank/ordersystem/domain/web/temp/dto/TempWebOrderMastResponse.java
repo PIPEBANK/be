@@ -1,10 +1,12 @@
 package com.pipebank.ordersystem.domain.web.temp.dto;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import com.pipebank.ordersystem.domain.web.temp.entity.TempWebOrderMast;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
@@ -48,6 +50,9 @@ public class TempWebOrderMastResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
+    // 🔥 OrderTran 리스트 추가 (통합 조회용)
+    private List<TempWebOrderTranResponse> orderTrans;
+
     // 비즈니스 메서드들 (Entity와 동일)
     public String getOrderKey() {
         return orderMastDate + "-" + orderMastSosok + "-" + orderMastUjcd + "-" + orderMastAcno;
@@ -112,6 +117,15 @@ public class TempWebOrderMastResponse {
         response.send = entity.getSend();
         response.createdAt = entity.getCreatedAt();
         response.updatedAt = entity.getUpdatedAt();
+        return response;
+    }
+    
+    /**
+     * OrderTran 포함 통합 조회용 팩토리 메서드
+     */
+    public static TempWebOrderMastResponse fromWithOrderTrans(TempWebOrderMast entity, List<TempWebOrderTranResponse> orderTrans) {
+        TempWebOrderMastResponse response = from(entity);
+        response.orderTrans = orderTrans;
         return response;
     }
 } 

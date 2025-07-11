@@ -101,18 +101,51 @@ public class TempWebOrderMastController {
         return ResponseEntity.ok(response);
     }
 
-    // ID로 조회
-    @GetMapping("/{orderMastDate}/{orderMastSosok}/{orderMastUjcd}/{orderMastAcno}")
-    public ResponseEntity<TempWebOrderMastResponse> findById(
-            @PathVariable String orderMastDate,
-            @PathVariable Integer orderMastSosok,
-            @PathVariable String orderMastUjcd,
-            @PathVariable Integer orderMastAcno) {
+    /**
+     * 주문번호로 조회 
+     * GET /api/web/temp/order-mast/by-order-number/{orderNumber}
+     * 
+     * @param orderNumber 주문번호 (형식: "YYYYMMDD-숫자", 예: "20250710-1")
+     * @return TempWebOrderMastResponse
+     * 
+     * 예시:
+     * - GET /api/web/temp/order-mast/by-order-number/20250710-1
+     * - GET /api/web/temp/order-mast/by-order-number/20240315-5
+     */
+    @GetMapping("/by-order-number/{orderNumber}")
+    public ResponseEntity<TempWebOrderMastResponse> findByOrderNumber(@PathVariable String orderNumber) {
+        log.info("주문번호로 임시저장 주문 조회 API 호출 - 주문번호: {}", orderNumber);
         
-        TempWebOrderMast.TempWebOrderMastId id = new TempWebOrderMast.TempWebOrderMastId(
-                orderMastDate, orderMastSosok, orderMastUjcd, orderMastAcno);
+        return tempWebOrderMastService.findByOrderNumber(orderNumber)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * 주문번호로 통합 수정 (OrderMast + OrderTran 한 번에 처리)
+     * PUT /api/web/temp/order-mast/by-order-number/{orderNumber}/with-trans
+     * 
+     * @param orderNumber 주문번호 (형식: "YYYYMMDD-숫자", 예: "20250710-1")
+     * @param request 수정 요청 데이터
+     * @return 수정된 TempWebOrderMastResponse (OrderTran 포함)
+     * 
+     * 사용 시나리오:
+     * 1. 임시저장 재저장: send=false로 기존 데이터 수정
+     * 2. 수정 후 전송: send=true로 수정된 데이터 전송
+     * 
+     * 예시:
+     * - PUT /api/web/temp/order-mast/by-order-number/20250710-1/with-trans
+     * - Body: { "send": false, "orderTrans": [...] } // 임시저장 재저장
+     * - Body: { "send": true, "orderTrans": [...] } // 수정 후 전송
+     */
+    @PutMapping("/by-order-number/{orderNumber}/with-trans")
+    public ResponseEntity<TempWebOrderMastResponse> updateWithTransByOrderNumber(
+            @PathVariable String orderNumber,
+            @RequestBody TempWebOrderMastCreateRequest request) {
         
-        return tempWebOrderMastService.findById(id)
+        log.info("주문번호로 통합 수정 API 호출 - 주문번호: {}, send: {}", orderNumber, request.getSend());
+        
+        return tempWebOrderMastService.updateWithTransByOrderNumber(orderNumber, request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

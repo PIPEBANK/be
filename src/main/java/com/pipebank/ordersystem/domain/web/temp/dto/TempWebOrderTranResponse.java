@@ -1,11 +1,12 @@
 package com.pipebank.ordersystem.domain.web.temp.dto;
 
-import com.pipebank.ordersystem.domain.web.temp.entity.TempWebOrderTran;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import com.pipebank.ordersystem.domain.web.temp.entity.TempWebOrderTran;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
@@ -56,6 +57,9 @@ public class TempWebOrderTranResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
+    // ERP ItemCode 정보 추가
+    private String itemCodeNum;  // 품목번호 (ERP ItemCode.itemCodeNum)
+
     // 비즈니스 메서드들 (Entity와 동일)
     public String getOrderTranKey() {
         return orderTranDate + "-" + orderTranSosok + "-" + orderTranUjcd + "-" + orderTranAcno + "-" + orderTranSeq;
@@ -112,6 +116,13 @@ public class TempWebOrderTranResponse {
         response.send = entity.getSend();
         response.createdAt = entity.getCreatedAt();
         response.updatedAt = entity.getUpdatedAt();
+        return response;
+    }
+    
+    // ERP ItemCode 정보와 함께 생성하는 새로운 팩토리 메서드
+    public static TempWebOrderTranResponse fromWithItemCode(TempWebOrderTran entity, String itemCodeNum) {
+        TempWebOrderTranResponse response = from(entity);
+        response.itemCodeNum = itemCodeNum;
         return response;
     }
 } 
