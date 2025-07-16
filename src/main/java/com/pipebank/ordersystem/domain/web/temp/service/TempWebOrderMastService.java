@@ -46,6 +46,8 @@ public class TempWebOrderMastService {
     // ERP ItemCode 조회를 위한 서비스 추가
     private final com.pipebank.ordersystem.domain.erp.service.ItemCodeService itemCodeService;
     private final com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository itemCodeRepository;
+    // 🔥 ERP DB에서 ACNO 조회를 위한 Repository 추가
+    private final com.pipebank.ordersystem.domain.erp.repository.OrderMastRepository erpOrderMastRepository;
 
     // 통합 생성 (Mast + Tran 한 번에 처리) - 새로 추가
     @Transactional
@@ -61,6 +63,7 @@ public class TempWebOrderMastService {
                 tranRequest.setOrderTranSosok(mastResponse.getOrderMastSosok());
                 tranRequest.setOrderTranUjcd(mastResponse.getOrderMastUjcd());
                 tranRequest.setOrderTranAcno(mastResponse.getOrderMastAcno());
+                tranRequest.setTempOrderId(mastResponse.getTempOrderId()); // 🔥 TempOrderId 설정
                 tranRequest.setSend(request.getSend()); // Mast와 동일한 send 상태
                 
                 // Tran 생성
@@ -74,7 +77,8 @@ public class TempWebOrderMastService {
                     mastResponse.getOrderMastDate(),
                     mastResponse.getOrderMastSosok(),
                     mastResponse.getOrderMastUjcd(),
-                    mastResponse.getOrderMastAcno()
+                    mastResponse.getOrderMastAcno(),
+                    mastResponse.getTempOrderId() // 🔥 TempOrderId 추가
             );
             
             tempWebOrderMastRepository.findById(tempId).ifPresent(this::convertToWebOrderMast);
@@ -90,16 +94,20 @@ public class TempWebOrderMastService {
         String currentUserId = SecurityUtils.getCurrentMemberId();
         LocalDateTime now = LocalDateTime.now();
         
-        // ACNO 자동 생성 (같은 날짜, 소속, 업장에 대한 시퀀스)
+        // ACNO 자동 생성 (🔥 ERP DB 기준)
         Integer nextAcno = generateNextAcno(request.getOrderMastDate(), 
                                           request.getOrderMastSosok(), 
                                           request.getOrderMastUjcd());
+        
+        // 🔥 TempOrderId 자동 생성
+        Integer nextTempOrderId = generateNextTempOrderId();
         
         TempWebOrderMast entity = TempWebOrderMast.builder()
                 .orderMastDate(request.getOrderMastDate())
                 .orderMastSosok(request.getOrderMastSosok())
                 .orderMastUjcd(request.getOrderMastUjcd())
-                .orderMastAcno(nextAcno) // 🔥 자동생성된 ACNO 사용
+                .orderMastAcno(nextAcno) // 🔥 ERP DB 기준 자동생성된 ACNO 사용
+                .tempOrderId(nextTempOrderId) // 🔥 자동생성된 TempOrderId 사용
                 .orderMastCust(request.getOrderMastCust())
                 .orderMastScust(request.getOrderMastScust())
                 .orderMastSawon(request.getOrderMastSawon())
@@ -143,16 +151,20 @@ public class TempWebOrderMastService {
         String currentUserId = SecurityUtils.getCurrentMemberId();
         LocalDateTime now = LocalDateTime.now();
         
-        // ACNO 자동 생성 (같은 날짜, 소속, 업장에 대한 시퀀스)
+        // ACNO 자동 생성 (🔥 ERP DB 기준)
         Integer nextAcno = generateNextAcno(request.getOrderMastDate(), 
                                           request.getOrderMastSosok(), 
                                           request.getOrderMastUjcd());
+        
+        // 🔥 TempOrderId 자동 생성
+        Integer nextTempOrderId = generateNextTempOrderId();
         
         TempWebOrderMast entity = TempWebOrderMast.builder()
                 .orderMastDate(request.getOrderMastDate())
                 .orderMastSosok(request.getOrderMastSosok())
                 .orderMastUjcd(request.getOrderMastUjcd())
-                .orderMastAcno(nextAcno) // 🔥 자동생성된 ACNO 사용
+                .orderMastAcno(nextAcno) // 🔥 ERP DB 기준 자동생성된 ACNO 사용
+                .tempOrderId(nextTempOrderId) // 🔥 자동생성된 TempOrderId 사용
                 .orderMastCust(request.getOrderMastCust())
                 .orderMastScust(request.getOrderMastScust())
                 .orderMastSawon(request.getOrderMastSawon())
@@ -211,6 +223,7 @@ public class TempWebOrderMastService {
      * 주문번호로 조회 (OrderTran 포함 통합 조회)
      * @param orderNumber 주문번호 (형식: "YYYYMMDD-숫자", 예: "20250710-1")
      * @return TempWebOrderMastResponse (OrderTran 리스트 포함)
+     * 🔥 가장 최신 TempOrderId를 가진 주문을 반환
      */
     public Optional<TempWebOrderMastResponse> findByOrderNumber(String orderNumber) {
         // orderNumber를 DATE와 ACNO로 분리
@@ -227,16 +240,17 @@ public class TempWebOrderMastService {
             throw new IllegalArgumentException("잘못된 주문번호 형식입니다. ACNO는 숫자여야 합니다.");
         }
         
-        // 1. OrderMast 조회
-        return tempWebOrderMastRepository.findByOrderNumber(orderDate, acno)
+        // 1. 🔥 가장 최신 TempOrderId를 가진 OrderMast 조회
+        return tempWebOrderMastRepository.findLatestByOrderNumber(orderDate, acno)
                 .map(orderMast -> {
-                    // 2. 관련된 OrderTran들 조회 (모든 소속/업장에서 검색)
+                    // 2. 🔥 해당 OrderMast와 동일한 tempOrderId를 가진 OrderTran들 조회
                     List<TempWebOrderTran> orderTrans = tempWebOrderTranRepository
-                            .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcno(
+                            .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
                                     orderMast.getOrderMastDate(),
                                     orderMast.getOrderMastSosok(),
                                     orderMast.getOrderMastUjcd(),
-                                    orderMast.getOrderMastAcno()
+                                    orderMast.getOrderMastAcno(),
+                                    orderMast.getTempOrderId() // 🔥 동일한 tempOrderId로 조회
                             );
                     
                     // 3. OrderTran을 DTO로 변환 (ItemCode 정보 포함)
@@ -256,6 +270,60 @@ public class TempWebOrderMastService {
                             .collect(Collectors.toList());
                     
                     // 4. OrderMast + OrderTran 통합 응답 생성
+                    return TempWebOrderMastResponse.fromWithOrderTrans(orderMast, orderTranResponses);
+                });
+    }
+
+    /**
+     * 주문번호 + tempOrderId로 상세 조회 (OrderTran 포함)
+     * @param orderNumber 주문번호 (형식: "YYYYMMDD-숫자", 예: "20250710-1")
+     * @param tempOrderId 임시주문 ID (중복 구분용)
+     * @return TempWebOrderMastResponse (OrderTran 리스트 포함)
+     */
+    public Optional<TempWebOrderMastResponse> findByOrderNumberAndTempId(String orderNumber, Integer tempOrderId) {
+        // orderNumber를 DATE와 ACNO로 분리
+        String[] parts = orderNumber.split("-");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("잘못된 주문번호 형식입니다. 올바른 형식: YYYYMMDD-숫자 (예: 20250710-1)");
+        }
+        
+        String orderDate = parts[0];
+        Integer acno;
+        try {
+            acno = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("잘못된 주문번호 형식입니다. ACNO는 숫자여야 합니다.");
+        }
+        
+        return tempWebOrderMastRepository.findByOrderNumberAndTempId(orderDate, acno, tempOrderId)
+                .map(orderMast -> {
+                    // 해당 OrderMast와 동일한 tempOrderId를 가진 OrderTran들 조회
+                    List<TempWebOrderTran> orderTrans = tempWebOrderTranRepository
+                            .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
+                                    orderMast.getOrderMastDate(),
+                                    orderMast.getOrderMastSosok(),
+                                    orderMast.getOrderMastUjcd(),
+                                    orderMast.getOrderMastAcno(),
+                                    orderMast.getTempOrderId()
+                            );
+                    
+                    // OrderTran을 DTO로 변환 (ItemCode 정보 포함)
+                    List<TempWebOrderTranResponse> orderTranResponses = orderTrans.stream()
+                            .map(orderTran -> {
+                                // ERP DB에서 ItemCode 정보 조회
+                                String itemCodeNum = null;
+                                if (orderTran.getOrderTranItem() != null) {
+                                    itemCodeNum = itemCodeRepository.findById(orderTran.getOrderTranItem())
+                                            .map(itemCode -> itemCode.getItemCodeNum())
+                                            .orElse(null);
+                                }
+                                
+                                // ItemCode 정보와 함께 Response 생성
+                                return TempWebOrderTranResponse.fromWithItemCode(orderTran, itemCodeNum);
+                            })
+                            .collect(Collectors.toList());
+                    
+                    // OrderMast + OrderTran 통합 응답 생성
                     return TempWebOrderMastResponse.fromWithOrderTrans(orderMast, orderTranResponses);
                 });
     }
@@ -295,12 +363,38 @@ public class TempWebOrderMastService {
                     String currentUserId = SecurityUtils.getCurrentMemberId();
                     LocalDateTime now = LocalDateTime.now();
                     
-                    // 기존 entity의 모든 필드 업데이트
+                    // 🔥 기존 데이터 삭제 전에 관련 TempWebOrderTran들도 삭제
+                    List<TempWebOrderTran> existingOrderTrans = tempWebOrderTranRepository
+                            .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
+                                    entity.getOrderMastDate(),
+                                    entity.getOrderMastSosok(),
+                                    entity.getOrderMastUjcd(),
+                                    entity.getOrderMastAcno(),
+                                    entity.getTempOrderId()
+                            );
+                    
+                    tempWebOrderTranRepository.deleteAll(existingOrderTrans);
+                    log.info("기존 TempWebOrderTran 삭제 완료: {}개", existingOrderTrans.size());
+                    
+                    // 🔥 기존 TempWebOrderMast 삭제
+                    tempWebOrderMastRepository.delete(entity);
+                    log.info("기존 TempWebOrderMast 삭제 완료: {}", entity.getOrderKey());
+                    
+                    // 🔥 ERP DB 기준으로 새로운 ACNO 생성
+                    Integer newAcno = generateNextAcno(request.getOrderMastDate(), 
+                                                      request.getOrderMastSosok(), 
+                                                      request.getOrderMastUjcd());
+                    
+                    // 🔥 새로운 TempOrderId 생성
+                    Integer newTempOrderId = generateNextTempOrderId();
+                    
+                    // 🔥 새로운 복합키로 새 레코드 생성
                     TempWebOrderMast updated = TempWebOrderMast.builder()
                             .orderMastDate(request.getOrderMastDate())
                             .orderMastSosok(request.getOrderMastSosok())
                             .orderMastUjcd(request.getOrderMastUjcd())
-                            .orderMastAcno(entity.getOrderMastAcno()) // 🔥 기존 entity의 ACNO 사용 (자동생성이므로 변경 불가)
+                            .orderMastAcno(newAcno) // 🔥 ERP DB 기준 새로운 ACNO 사용
+                            .tempOrderId(newTempOrderId) // 🔥 새로운 TempOrderId 사용
                             .orderMastCust(request.getOrderMastCust())
                             .orderMastScust(request.getOrderMastScust())
                             .orderMastSawon(request.getOrderMastSawon())
@@ -332,6 +426,7 @@ public class TempWebOrderMastService {
                             .build();
                     
                     TempWebOrderMast saved = tempWebOrderMastRepository.save(updated);
+                    log.info("새로운 TempWebOrderMast 생성 완료: {} → {}", entity.getOrderKey(), saved.getOrderKey());
                     
                     // send가 false → true로 변경되면 WebOrderMast로 복사
                     if (Boolean.TRUE.equals(request.getSend()) && !wasSentBefore) {
@@ -343,11 +438,100 @@ public class TempWebOrderMastService {
     }
 
     /**
-     * 주문번호로 통합 수정 (OrderMast + OrderTran 한 번에 처리)
+     * 주문번호 + tempOrderId로 통합 수정 (OrderMast + OrderTran 한 번에 처리)
+     * @param orderNumber 주문번호 (형식: "YYYYMMDD-숫자", 예: "20250710-1")
+     * @param tempOrderId 임시주문 ID (중복 구분용)
+     * @param request 수정 요청 데이터
+     * @return 수정된 TempWebOrderMastResponse
+     */
+    @Transactional
+    public Optional<TempWebOrderMastResponse> updateWithTransByOrderNumberAndTempId(String orderNumber, Integer tempOrderId, TempWebOrderMastCreateRequest request) {
+        // orderNumber를 DATE와 ACNO로 분리
+        String[] parts = orderNumber.split("-");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("잘못된 주문번호 형식입니다. 올바른 형식: YYYYMMDD-숫자 (예: 20250710-1)");
+        }
+        
+        String orderDate = parts[0];
+        Integer acno;
+        try {
+            acno = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("잘못된 주문번호 형식입니다. ACNO는 숫자여야 합니다.");
+        }
+        
+        // 정확한 복합키로 기존 데이터 조회
+        TempWebOrderMast.TempWebOrderMastId targetId = new TempWebOrderMast.TempWebOrderMastId(
+                orderDate, 
+                request.getOrderMastSosok(),
+                request.getOrderMastUjcd(),
+                acno, 
+                tempOrderId
+        );
+        
+        return tempWebOrderMastRepository.findById(targetId)
+                .map(existingEntity -> {
+                    boolean wasSentBefore = Boolean.TRUE.equals(existingEntity.getSend());
+                    
+                    // 1. 🔥 기존 데이터 삭제 (Mast + Tran)
+                    List<TempWebOrderTran> existingOrderTrans = tempWebOrderTranRepository
+                            .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
+                                    existingEntity.getOrderMastDate(),
+                                    existingEntity.getOrderMastSosok(),
+                                    existingEntity.getOrderMastUjcd(),
+                                    existingEntity.getOrderMastAcno(),
+                                    existingEntity.getTempOrderId()
+                            );
+                    
+                    tempWebOrderTranRepository.deleteAll(existingOrderTrans);
+                    log.info("기존 TempWebOrderTran 삭제 완료: {}개", existingOrderTrans.size());
+                    
+                    tempWebOrderMastRepository.delete(existingEntity);
+                    log.info("기존 TempWebOrderMast 삭제 완료: {}", existingEntity.getOrderKey());
+                    
+                    // 2. 🔥 새로운 Mast 생성 (createWithoutConversion 로직 사용)
+                    TempWebOrderMastResponse newMastResponse = createWithoutConversion(request);
+                    
+                    // 3. 🔥 새로운 Tran들 생성
+                    if (request.getOrderTrans() != null && !request.getOrderTrans().isEmpty()) {
+                        for (TempWebOrderTranCreateRequest tranRequest : request.getOrderTrans()) {
+                            // Mast의 키 정보를 Tran에 자동 설정
+                            tranRequest.setOrderTranDate(newMastResponse.getOrderMastDate());
+                            tranRequest.setOrderTranSosok(newMastResponse.getOrderMastSosok());
+                            tranRequest.setOrderTranUjcd(newMastResponse.getOrderMastUjcd());
+                            tranRequest.setOrderTranAcno(newMastResponse.getOrderMastAcno());
+                            tranRequest.setTempOrderId(newMastResponse.getTempOrderId());
+                            tranRequest.setSend(request.getSend());
+                            
+                            // Tran 생성
+                            tempWebOrderTranService.create(tranRequest);
+                        }
+                    }
+                    
+                    // 4. 🔥 send=true이면 변환 실행
+                    if (Boolean.TRUE.equals(request.getSend()) && !wasSentBefore) {
+                        TempWebOrderMast.TempWebOrderMastId newId = new TempWebOrderMast.TempWebOrderMastId(
+                                newMastResponse.getOrderMastDate(),
+                                newMastResponse.getOrderMastSosok(),
+                                newMastResponse.getOrderMastUjcd(),
+                                newMastResponse.getOrderMastAcno(),
+                                newMastResponse.getTempOrderId()
+                        );
+                        
+                        tempWebOrderMastRepository.findById(newId).ifPresent(this::convertToWebOrderMast);
+                    }
+                    
+                    return newMastResponse;
+                });
+    }
+
+    /**
+     * 🔥 Deprecated: 주문번호로만 통합 수정 (중복 데이터 식별 불가)
      * @param orderNumber 주문번호 (형식: "YYYYMMDD-숫자", 예: "20250710-1")
      * @param request 수정 요청 데이터
      * @return 수정된 TempWebOrderMastResponse
      */
+    @Deprecated
     @Transactional
     public Optional<TempWebOrderMastResponse> updateWithTransByOrderNumber(String orderNumber, TempWebOrderMastCreateRequest request) {
         // orderNumber를 DATE와 ACNO로 분리
@@ -365,7 +549,7 @@ public class TempWebOrderMastService {
         }
         
         // 1. 기존 OrderMast 조회
-        return tempWebOrderMastRepository.findByOrderNumber(orderDate, acno)
+        return tempWebOrderMastRepository.findLatestByOrderNumber(orderDate, acno) // 🔥 최신 tempOrderId 기준 조회
                 .map(existingOrderMast -> {
                     String existingDate = existingOrderMast.getOrderMastDate();
                     String requestDate = request.getOrderMastDate();
@@ -377,11 +561,12 @@ public class TempWebOrderMastService {
                         
                         // 2-1. 기존 데이터 완전 삭제
                         List<TempWebOrderTran> existingOrderTrans = tempWebOrderTranRepository
-                                .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcno(
+                                .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
                                         existingOrderMast.getOrderMastDate(),
                                         existingOrderMast.getOrderMastSosok(),
                                         existingOrderMast.getOrderMastUjcd(),
-                                        existingOrderMast.getOrderMastAcno()
+                                        existingOrderMast.getOrderMastAcno(),
+                                        existingOrderMast.getTempOrderId() // 🔥 기존 tempOrderId 기준 삭제
                                 );
                         
                         tempWebOrderTranRepository.deleteAll(existingOrderTrans);
@@ -399,6 +584,7 @@ public class TempWebOrderMastService {
                                 tranRequest.setOrderTranSosok(newMastResponse.getOrderMastSosok());
                                 tranRequest.setOrderTranUjcd(newMastResponse.getOrderMastUjcd());
                                 tranRequest.setOrderTranAcno(newMastResponse.getOrderMastAcno());
+                                tranRequest.setTempOrderId(newMastResponse.getTempOrderId()); // 🔥 새로운 TempOrderId 설정
                                 tranRequest.setSend(request.getSend()); // Mast와 동일한 send 상태
                                 
                                 // Tran 생성
@@ -415,7 +601,8 @@ public class TempWebOrderMastService {
                                     newMastResponse.getOrderMastDate(),
                                     newMastResponse.getOrderMastSosok(),
                                     newMastResponse.getOrderMastUjcd(),
-                                    newMastResponse.getOrderMastAcno()
+                                    newMastResponse.getOrderMastAcno(),
+                                    newMastResponse.getTempOrderId() // 🔥 새로운 TempOrderId 사용
                             );
                             
                             log.info("🔍 PUT API(날짜변경) - TempWebOrderMast 조회 시도: {}", newId);
@@ -436,7 +623,8 @@ public class TempWebOrderMastService {
                                 newMastResponse.getOrderMastDate(),
                                 newMastResponse.getOrderMastSosok(),
                                 newMastResponse.getOrderMastUjcd(),
-                                newMastResponse.getOrderMastAcno()
+                                newMastResponse.getOrderMastAcno(),
+                                newMastResponse.getTempOrderId() // 🔥 TempOrderId 추가
                         );
                         
                         return TempWebOrderMastResponse.fromWithOrderTrans(
@@ -450,25 +638,23 @@ public class TempWebOrderMastService {
                         
                         // 3-1. 기존 OrderTran들 삭제
                         List<TempWebOrderTran> existingOrderTrans = tempWebOrderTranRepository
-                                .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcno(
+                                .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
                                         existingOrderMast.getOrderMastDate(),
                                         existingOrderMast.getOrderMastSosok(),
                                         existingOrderMast.getOrderMastUjcd(),
-                                        existingOrderMast.getOrderMastAcno()
+                                        existingOrderMast.getOrderMastAcno(),
+                                        existingOrderMast.getTempOrderId() // 🔥 기존 tempOrderId 기준 삭제
                                 );
                         
                         // 기존 OrderTran 삭제
                         tempWebOrderTranRepository.deleteAll(existingOrderTrans);
                         
-                        // 3-2. OrderMast 수정 (기존 ID 사용)
-                        TempWebOrderMast.TempWebOrderMastId existingId = new TempWebOrderMast.TempWebOrderMastId(
-                                existingOrderMast.getOrderMastDate(),
-                                existingOrderMast.getOrderMastSosok(),
-                                existingOrderMast.getOrderMastUjcd(),
-                                existingOrderMast.getOrderMastAcno()
-                        );
+                        // 3-2. OrderMast 수정 → 🔥 새로 생성으로 변경 (ACNO, TempOrderId 새로 생성)
                         
-                        // 🔥 send 값을 임시로 false로 설정하여 update에서 변환 방지
+                        // 🔥 기존 OrderMast 삭제
+                        tempWebOrderMastRepository.delete(existingOrderMast);
+                        
+                        // 🔥 새로운 ACNO와 TempOrderId로 새로 생성
                         TempWebOrderMastCreateRequest tempRequest = new TempWebOrderMastCreateRequest();
                         // 모든 필드 복사
                         tempRequest.setOrderMastDate(request.getOrderMastDate());
@@ -496,13 +682,7 @@ public class TempWebOrderMastService {
                         tempRequest.setOrderMastOtime(request.getOrderMastOtime());
                         tempRequest.setSend(false); // 🔥 임시로 false 설정
                         
-                        Optional<TempWebOrderMastResponse> updatedMast = update(existingId, tempRequest);
-                        
-                        if (updatedMast.isEmpty()) {
-                            throw new IllegalStateException("OrderMast 수정에 실패했습니다.");
-                        }
-                        
-                        TempWebOrderMastResponse mastResponse = updatedMast.get();
+                        TempWebOrderMastResponse mastResponse = createWithoutConversion(tempRequest);
                         
                         // 3-3. 새로운 OrderTran들 생성
                         List<TempWebOrderTranResponse> newOrderTrans = new ArrayList<>();
@@ -517,6 +697,7 @@ public class TempWebOrderMastService {
                                 tranRequest.setOrderTranSosok(mastResponse.getOrderMastSosok());
                                 tranRequest.setOrderTranUjcd(mastResponse.getOrderMastUjcd());
                                 tranRequest.setOrderTranAcno(mastResponse.getOrderMastAcno());
+                                tranRequest.setTempOrderId(mastResponse.getTempOrderId()); // 🔥 새로운 TempOrderId 설정
                                 tranRequest.setSend(request.getSend()); // Mast와 동일한 send 상태
                                 
                                 log.info("🔍 PUT API - [{}] OrderTran 키 설정: {}-{}-{}-{}", i+1, 
@@ -539,7 +720,8 @@ public class TempWebOrderMastService {
                                     mastResponse.getOrderMastDate(),
                                     mastResponse.getOrderMastSosok(),
                                     mastResponse.getOrderMastUjcd(),
-                                    mastResponse.getOrderMastAcno()
+                                    mastResponse.getOrderMastAcno(),
+                                    mastResponse.getTempOrderId() // 🔥 TempOrderId 추가
                             );
                             
                             log.info("🔍 PUT API - TempWebOrderMast 조회 시도: {}", tempId);
@@ -553,6 +735,7 @@ public class TempWebOrderMastService {
                                         .orderMastSosok(entityToUpdate.getOrderMastSosok())
                                         .orderMastUjcd(entityToUpdate.getOrderMastUjcd())
                                         .orderMastAcno(entityToUpdate.getOrderMastAcno())
+                                        .tempOrderId(entityToUpdate.getTempOrderId()) // 🔥 TempOrderId 추가
                                         .orderMastCust(entityToUpdate.getOrderMastCust())
                                         .orderMastScust(entityToUpdate.getOrderMastScust())
                                         .orderMastSawon(entityToUpdate.getOrderMastSawon())
@@ -588,11 +771,12 @@ public class TempWebOrderMastService {
                                 
                                 // 🔥 TempWebOrderTran의 send 값도 true로 업데이트
                                 log.info("🔍 PUT API - TempWebOrderTran send 값을 true로 업데이트");
-                                List<TempWebOrderTran> tempTrans = tempWebOrderTranRepository.findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcno(
+                                List<TempWebOrderTran> tempTrans = tempWebOrderTranRepository.findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
                                         finalEntity.getOrderMastDate(),
                                         finalEntity.getOrderMastSosok(),
                                         finalEntity.getOrderMastUjcd(),
-                                        finalEntity.getOrderMastAcno()
+                                        finalEntity.getOrderMastAcno(),
+                                        finalEntity.getTempOrderId() // 🔥 TempOrderId 추가
                                 );
                                 
                                 for (TempWebOrderTran tempTran : tempTrans) {
@@ -602,6 +786,7 @@ public class TempWebOrderMastService {
                                             .orderTranUjcd(tempTran.getOrderTranUjcd())
                                             .orderTranAcno(tempTran.getOrderTranAcno())
                                             .orderTranSeq(tempTran.getOrderTranSeq())
+                                            .tempOrderId(tempTran.getTempOrderId()) // 🔥 TempOrderId 추가
                                             .orderTranItemVer(tempTran.getOrderTranItemVer())
                                             .orderTranItem(tempTran.getOrderTranItem())
                                             .orderTranDeta(tempTran.getOrderTranDeta())
@@ -654,8 +839,16 @@ public class TempWebOrderMastService {
                         }
                         
                         // 3-5. 통합 응답 생성
+                        TempWebOrderMast.TempWebOrderMastId finalId = new TempWebOrderMast.TempWebOrderMastId(
+                                mastResponse.getOrderMastDate(),
+                                mastResponse.getOrderMastSosok(),
+                                mastResponse.getOrderMastUjcd(),
+                                mastResponse.getOrderMastAcno(),
+                                mastResponse.getTempOrderId() // 🔥 TempOrderId 포함
+                        );
+                        
                         return TempWebOrderMastResponse.fromWithOrderTrans(
-                                tempWebOrderMastRepository.findById(existingId).orElseThrow(),
+                                tempWebOrderMastRepository.findById(finalId).orElseThrow(),
                                 newOrderTrans
                         );
                     }
@@ -783,12 +976,14 @@ public class TempWebOrderMastService {
         System.out.println("   - SOSOK: " + tempEntity.getOrderMastSosok());
         System.out.println("   - UJCD: " + tempEntity.getOrderMastUjcd());
         System.out.println("   - ACNO: " + tempEntity.getOrderMastAcno());
+        System.out.println("   - TempOrderId: " + tempEntity.getTempOrderId()); // 🔥 TempOrderId 추가
         
-        List<TempWebOrderTran> tempTrans = tempWebOrderTranRepository.findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcno(
+        List<TempWebOrderTran> tempTrans = tempWebOrderTranRepository.findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
                 tempEntity.getOrderMastDate(),
                 tempEntity.getOrderMastSosok(),
                 tempEntity.getOrderMastUjcd(),
-                tempEntity.getOrderMastAcno()
+                tempEntity.getOrderMastAcno(),
+                tempEntity.getTempOrderId() // 🔥 TempOrderId 추가
         );
         
         System.out.println("🔍 TempWebOrderTran 조회 결과: " + tempTrans.size() + "개 발견");
@@ -920,10 +1115,18 @@ public class TempWebOrderMastService {
     }
     
     /**
-     * ACNO 자동 생성 - 같은 날짜, 소속, 업장에 대한 시퀀스 번호
+     * ACNO 자동 생성 - 🔥 ERP DB 기준으로 같은 날짜, 소속, 업장에 대한 시퀀스 번호
      */
     private Integer generateNextAcno(String orderDate, Integer sosok, String ujcd) {
-        Integer maxAcno = tempWebOrderMastRepository.findMaxAcnoByDateAndSosokAndUjcd(orderDate, sosok, ujcd);
+        Integer maxAcno = erpOrderMastRepository.findMaxAcnoByDateAndSosokAndUjcd(orderDate, sosok, ujcd);
         return maxAcno + 1;
+    }
+
+    /**
+     * 🔥 TempOrderId 자동 생성 - 전체 테이블의 최대값 + 1
+     */
+    private Integer generateNextTempOrderId() {
+        Integer maxTempOrderId = tempWebOrderMastRepository.findMaxTempOrderId();
+        return maxTempOrderId + 1;
     }
 } 

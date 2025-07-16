@@ -20,7 +20,20 @@ public interface TempWebOrderTranRepository extends JpaRepository<TempWebOrderTr
                                 @Param("ujcd") String ujcd,
                                 @Param("acno") Integer acno);
     
+    // 🔥 SEQ 자동 생성을 위한 메서드 - 해당 주문 + TempOrderId의 최대 SEQ 조회
+    @Query("SELECT COALESCE(MAX(t.orderTranSeq), 0) FROM TempWebOrderTran t " +
+           "WHERE t.orderTranDate = :date AND t.orderTranSosok = :sosok AND t.orderTranUjcd = :ujcd AND t.orderTranAcno = :acno AND t.tempOrderId = :tempOrderId")
+    Integer findMaxSeqByOrderKeyAndTempOrderId(@Param("date") String date, 
+                                               @Param("sosok") Integer sosok, 
+                                               @Param("ujcd") String ujcd,
+                                               @Param("acno") Integer acno,
+                                               @Param("tempOrderId") Integer tempOrderId);
+    
     // 특정 주문의 모든 TempWebOrderTran 조회
     List<TempWebOrderTran> findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcno(
             String orderTranDate, Integer orderTranSosok, String orderTranUjcd, Integer orderTranAcno);
+    
+    // 🔥 특정 주문 + TempOrderId의 모든 TempWebOrderTran 조회
+    List<TempWebOrderTran> findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
+            String orderTranDate, Integer orderTranSosok, String orderTranUjcd, Integer orderTranAcno, Integer tempOrderId);
 } 

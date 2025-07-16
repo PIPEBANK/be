@@ -40,6 +40,10 @@ public class TempWebOrderTran {
     @Column(name = "ORDER_TRAN_SEQ", columnDefinition = "int(10)", nullable = false)
     private Integer orderTranSeq; 
 
+    @Id
+    @Column(name = "TEMP_ORDER_ID", columnDefinition = "int(10)", nullable = false)
+    private Integer tempOrderId; // 🔥 임시주문 고유ID (중복 방지용)
+
     // === 기존 WebOrderTran과 완전히 동일한 필드들 ===
     @Column(name = "ORDER_TRAN_ITEM_VER", length = 10, nullable = false)
     private String orderTranItemVer; //품목버전
@@ -146,7 +150,7 @@ public class TempWebOrderTran {
 
     @Builder
     public TempWebOrderTran(String orderTranDate, Integer orderTranSosok, String orderTranUjcd, Integer orderTranAcno,
-                    Integer orderTranSeq, String orderTranItemVer, Integer orderTranItem, String orderTranDeta,
+                    Integer orderTranSeq, Integer tempOrderId, String orderTranItemVer, Integer orderTranItem, String orderTranDeta,
                     String orderTranSpec, String orderTranUnit, Integer orderTranCalc, Integer orderTranVdiv,
                     Integer orderTranAdiv, BigDecimal orderTranRate, BigDecimal orderTranCnt, BigDecimal orderTranConvertWeight,
                     BigDecimal orderTranDcPer, BigDecimal orderTranDcAmt, BigDecimal orderTranForiAmt, BigDecimal orderTranAmt,
@@ -160,6 +164,7 @@ public class TempWebOrderTran {
         this.orderTranUjcd = orderTranUjcd;
         this.orderTranAcno = orderTranAcno;
         this.orderTranSeq = orderTranSeq;
+        this.tempOrderId = tempOrderId;
         this.orderTranItemVer = orderTranItemVer;
         this.orderTranItem = orderTranItem;
         this.orderTranDeta = orderTranDeta;
@@ -241,13 +246,15 @@ public class TempWebOrderTran {
         private String orderTranUjcd;
         private Integer orderTranAcno;
         private Integer orderTranSeq;
+        private Integer tempOrderId; // 🔥 임시주문 고유ID
 
-        public TempWebOrderTranId(String orderTranDate, Integer orderTranSosok, String orderTranUjcd, Integer orderTranAcno, Integer orderTranSeq) {
+        public TempWebOrderTranId(String orderTranDate, Integer orderTranSosok, String orderTranUjcd, Integer orderTranAcno, Integer orderTranSeq, Integer tempOrderId) {
             this.orderTranDate = orderTranDate;
             this.orderTranSosok = orderTranSosok;
             this.orderTranUjcd = orderTranUjcd;
             this.orderTranAcno = orderTranAcno;
             this.orderTranSeq = orderTranSeq;
+            this.tempOrderId = tempOrderId;
         }
 
         @Override
@@ -261,7 +268,8 @@ public class TempWebOrderTran {
             if (!orderTranSosok.equals(that.orderTranSosok)) return false;
             if (!orderTranUjcd.equals(that.orderTranUjcd)) return false;
             if (!orderTranAcno.equals(that.orderTranAcno)) return false;
-            return orderTranSeq.equals(that.orderTranSeq);
+            if (!orderTranSeq.equals(that.orderTranSeq)) return false;
+            return tempOrderId.equals(that.tempOrderId);
         }
 
         @Override
@@ -271,6 +279,7 @@ public class TempWebOrderTran {
             result = 31 * result + orderTranUjcd.hashCode();
             result = 31 * result + orderTranAcno.hashCode();
             result = 31 * result + orderTranSeq.hashCode();
+            result = 31 * result + tempOrderId.hashCode();
             return result;
         }
     }

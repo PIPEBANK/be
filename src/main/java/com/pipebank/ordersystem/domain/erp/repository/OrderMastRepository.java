@@ -213,4 +213,11 @@ public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.
             @Param("shipNumber") String shipNumber,
             @Param("sdiv") String sdiv,
             @Param("comName") String comName);
+
+    // 🔥 ERP DB에서 ACNO 최댓값 조회 (웹에서 ACNO 생성용)
+    @Query("SELECT COALESCE(MAX(o.orderMastAcno), 0) FROM OrderMast o WHERE " +
+           "o.orderMastDate = :orderDate AND o.orderMastSosok = :sosok AND o.orderMastUjcd = :ujcd")
+    Integer findMaxAcnoByDateAndSosokAndUjcd(@Param("orderDate") String orderDate, 
+                                            @Param("sosok") Integer sosok, 
+                                            @Param("ujcd") String ujcd);
 } 

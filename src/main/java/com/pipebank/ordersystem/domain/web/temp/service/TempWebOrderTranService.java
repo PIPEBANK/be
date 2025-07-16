@@ -39,7 +39,8 @@ public class TempWebOrderTranService {
         Integer nextSeq = generateNextSeq(request.getOrderTranDate(), 
                                         request.getOrderTranSosok(), 
                                         request.getOrderTranUjcd(), 
-                                        request.getOrderTranAcno());
+                                        request.getOrderTranAcno(),
+                                        request.getTempOrderId()); // 🔥 TempOrderId 추가
         
         TempWebOrderTran entity = TempWebOrderTran.builder()
                 .orderTranDate(request.getOrderTranDate())
@@ -47,6 +48,7 @@ public class TempWebOrderTranService {
                 .orderTranUjcd(request.getOrderTranUjcd())
                 .orderTranAcno(request.getOrderTranAcno()) // 🔥 외부에서 받아온 ACNO 사용
                 .orderTranSeq(nextSeq) // 🔥 자동생성된 SEQ 사용
+                .tempOrderId(request.getTempOrderId()) // 🔥 TempOrderId 설정
                 .orderTranItemVer(request.getOrderTranItemVer())
                 .orderTranItem(request.getOrderTranItem())
                 .orderTranDeta(request.getOrderTranDeta())
@@ -242,10 +244,10 @@ public class TempWebOrderTranService {
     }
     
     /**
-     * SEQ 자동 생성 - 해당 주문의 시퀀스 번호
+     * SEQ 자동 생성 - 해당 주문의 시퀀스 번호 (🔥 TempOrderId 기준)
      */
-    private Integer generateNextSeq(String orderDate, Integer sosok, String ujcd, Integer acno) {
-        Integer maxSeq = tempWebOrderTranRepository.findMaxSeqByOrderKey(orderDate, sosok, ujcd, acno);
+    private Integer generateNextSeq(String orderDate, Integer sosok, String ujcd, Integer acno, Integer tempOrderId) {
+        Integer maxSeq = tempWebOrderTranRepository.findMaxSeqByOrderKeyAndTempOrderId(orderDate, sosok, ujcd, acno, tempOrderId);
         return maxSeq + 1;
     }
 } 

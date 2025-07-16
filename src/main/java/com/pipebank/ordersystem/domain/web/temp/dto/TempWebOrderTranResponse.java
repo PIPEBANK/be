@@ -18,6 +18,7 @@ public class TempWebOrderTranResponse {
     private String orderTranUjcd;
     private Integer orderTranAcno;
     private Integer orderTranSeq;
+    private Integer tempOrderId; // 🔥 임시주문 고유ID 추가
     
     // 기본 필드들
     private String orderTranItemVer;

@@ -21,6 +21,10 @@ public interface TempWebOrderMastRepository extends JpaRepository<TempWebOrderMa
                                            @Param("sosok") Integer sosok, 
                                            @Param("ujcd") String ujcd);
     
+    // 🔥 TempOrderId 자동 생성을 위한 메서드 - 전체 테이블의 최대 TempOrderId 조회
+    @Query("SELECT COALESCE(MAX(t.tempOrderId), 0) FROM TempWebOrderMast t")
+    Integer findMaxTempOrderId();
+    
     /**
      * 거래처별 임시저장 주문 목록 조회 (페이징 + 필터링)
      * - send = false인 것만 조회
@@ -63,4 +67,24 @@ public interface TempWebOrderMastRepository extends JpaRepository<TempWebOrderMa
            "t.orderMastDate = :orderDate AND t.orderMastAcno = :acno")
     Optional<TempWebOrderMast> findByOrderNumber(@Param("orderDate") String orderDate, 
                                                @Param("acno") Integer acno);
+
+    /**
+     * 🔥 주문번호로 조회 - 가장 최신 TempOrderId 기준 (tempOrderId가 가장 큰 것)
+     * orderNumber 형식: "YYYYMMDD-숫자" (예: "20250710-1")
+     */
+    @Query("SELECT t FROM TempWebOrderMast t WHERE " +
+           "t.orderMastDate = :orderDate AND t.orderMastAcno = :acno " +
+           "ORDER BY t.tempOrderId DESC LIMIT 1")
+    Optional<TempWebOrderMast> findLatestByOrderNumber(@Param("orderDate") String orderDate, 
+                                                      @Param("acno") Integer acno);
+
+    /**
+     * 주문번호 + tempOrderId로 정확한 데이터 조회
+     * orderNumber 형식: "YYYYMMDD-숫자" (예: "20250710-1")
+     */
+    @Query("SELECT t FROM TempWebOrderMast t WHERE " +
+           "t.orderMastDate = :orderDate AND t.orderMastAcno = :acno AND t.tempOrderId = :tempOrderId")
+    Optional<TempWebOrderMast> findByOrderNumberAndTempId(@Param("orderDate") String orderDate, 
+                                                         @Param("acno") Integer acno,
+                                                         @Param("tempOrderId") Integer tempOrderId);
 } 

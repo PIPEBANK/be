@@ -42,7 +42,7 @@ public class TempWebOrderTranController {
         return ResponseEntity.ok(responses);
     }
 
-    // ID로 조회
+    // ID로 조회 (🔥 Deprecated - tempOrderId 없이는 정확한 식별 불가능, by-order-number API 사용 권장)
     @GetMapping("/{orderTranDate}/{orderTranSosok}/{orderTranUjcd}/{orderTranAcno}/{orderTranSeq}")
     public ResponseEntity<TempWebOrderTranResponse> findById(
             @PathVariable String orderTranDate,
@@ -51,15 +51,12 @@ public class TempWebOrderTranController {
             @PathVariable Integer orderTranAcno,
             @PathVariable Integer orderTranSeq) {
         
-        TempWebOrderTran.TempWebOrderTranId id = new TempWebOrderTran.TempWebOrderTranId(
-                orderTranDate, orderTranSosok, orderTranUjcd, orderTranAcno, orderTranSeq);
-        
-        return tempWebOrderTranService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        // 🔥 tempOrderId 없이는 정확한 조회 불가능
+        return ResponseEntity.badRequest()
+                .body(null); // 사용 불가 응답
     }
 
-    // 수정
+    // 수정 (🔥 Deprecated - tempOrderId 없이는 정확한 식별 불가능, by-order-number API 사용 권장)
     @PutMapping("/{orderTranDate}/{orderTranSosok}/{orderTranUjcd}/{orderTranAcno}/{orderTranSeq}")
     public ResponseEntity<TempWebOrderTranResponse> update(
             @PathVariable String orderTranDate,
@@ -69,15 +66,12 @@ public class TempWebOrderTranController {
             @PathVariable Integer orderTranSeq,
             @RequestBody TempWebOrderTranCreateRequest request) {
         
-        TempWebOrderTran.TempWebOrderTranId id = new TempWebOrderTran.TempWebOrderTranId(
-                orderTranDate, orderTranSosok, orderTranUjcd, orderTranAcno, orderTranSeq);
-        
-        return tempWebOrderTranService.update(id, request)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        // 🔥 tempOrderId 없이는 정확한 수정 불가능
+        return ResponseEntity.badRequest()
+                .body(null); // 사용 불가 응답
     }
 
-    // 삭제
+    // 삭제 (🔥 Deprecated - tempOrderId 없이는 정확한 식별 불가능, by-order-number API 사용 권장)
     @DeleteMapping("/{orderTranDate}/{orderTranSosok}/{orderTranUjcd}/{orderTranAcno}/{orderTranSeq}")
     public ResponseEntity<Void> delete(
             @PathVariable String orderTranDate,
@@ -86,14 +80,11 @@ public class TempWebOrderTranController {
             @PathVariable Integer orderTranAcno,
             @PathVariable Integer orderTranSeq) {
         
-        TempWebOrderTran.TempWebOrderTranId id = new TempWebOrderTran.TempWebOrderTranId(
-                orderTranDate, orderTranSosok, orderTranUjcd, orderTranAcno, orderTranSeq);
-        
-        boolean deleted = tempWebOrderTranService.delete(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+        // 🔥 tempOrderId 없이는 정확한 삭제 불가능
+        return ResponseEntity.badRequest().build(); // 사용 불가 응답
     }
 
-    // send 상태를 true로 변경하여 WebOrderTran으로 변환
+    // send 상태를 true로 변경하여 WebOrderTran으로 변환 (🔥 Deprecated - by-order-number API 사용 권장)
     @PatchMapping("/{orderTranDate}/{orderTranSosok}/{orderTranUjcd}/{orderTranAcno}/{orderTranSeq}/send")
     public ResponseEntity<?> markAsSent(
             @PathVariable String orderTranDate,
@@ -102,72 +93,8 @@ public class TempWebOrderTranController {
             @PathVariable Integer orderTranAcno,
             @PathVariable Integer orderTranSeq) {
         
-        TempWebOrderTran.TempWebOrderTranId id = new TempWebOrderTran.TempWebOrderTranId(
-                orderTranDate, orderTranSosok, orderTranUjcd, orderTranAcno, orderTranSeq);
-        
-        try {
-            // 현재 임시저장 데이터 조회
-            return tempWebOrderTranService.findById(id)
-                    .map(tempOrderTran -> {
-                        if (Boolean.TRUE.equals(tempOrderTran.getSend())) {
-                            return ResponseEntity.badRequest()
-                                    .body(Map.of("error", "이미 전송된 주문상세입니다."));
-                        }
-                        
-                        // send를 true로 변경하는 요청 생성
-                        TempWebOrderTranCreateRequest updateRequest = TempWebOrderTranCreateRequest.builder()
-                                .orderTranDate(tempOrderTran.getOrderTranDate())
-                                .orderTranSosok(tempOrderTran.getOrderTranSosok())
-                                .orderTranUjcd(tempOrderTran.getOrderTranUjcd())
-                                .orderTranAcno(tempOrderTran.getOrderTranAcno()) // 기존 ACNO 사용
-                                // orderTranSeq는 자동생성이므로 제거
-                                .orderTranItemVer(tempOrderTran.getOrderTranItemVer())
-                                .orderTranItem(tempOrderTran.getOrderTranItem())
-                                .orderTranDeta(tempOrderTran.getOrderTranDeta())
-                                .orderTranSpec(tempOrderTran.getOrderTranSpec())
-                                .orderTranUnit(tempOrderTran.getOrderTranUnit())
-                                .orderTranCalc(tempOrderTran.getOrderTranCalc())
-                                .orderTranVdiv(tempOrderTran.getOrderTranVdiv())
-                                .orderTranAdiv(tempOrderTran.getOrderTranAdiv())
-                                .orderTranRate(tempOrderTran.getOrderTranRate())
-                                .orderTranCnt(tempOrderTran.getOrderTranCnt())
-                                .orderTranConvertWeight(tempOrderTran.getOrderTranConvertWeight())
-                                .orderTranDcPer(tempOrderTran.getOrderTranDcPer())
-                                .orderTranDcAmt(tempOrderTran.getOrderTranDcAmt())
-                                .orderTranForiAmt(tempOrderTran.getOrderTranForiAmt())
-                                .orderTranAmt(tempOrderTran.getOrderTranAmt())
-                                .orderTranNet(tempOrderTran.getOrderTranNet())
-                                .orderTranVat(tempOrderTran.getOrderTranVat())
-                                .orderTranAdv(tempOrderTran.getOrderTranAdv())
-                                .orderTranTot(tempOrderTran.getOrderTranTot())
-                                .orderTranLrate(tempOrderTran.getOrderTranLrate())
-                                .orderTranPrice(tempOrderTran.getOrderTranPrice())
-                                .orderTranPrice2(tempOrderTran.getOrderTranPrice2())
-                                .orderTranLdiv(tempOrderTran.getOrderTranLdiv())
-                                .orderTranRemark(tempOrderTran.getOrderTranRemark())
-                                .orderTranStau(tempOrderTran.getOrderTranStau())
-                                // orderTranFdate, orderTranFuser, orderTranLdate, orderTranLuser는 자동생성
-                                .orderTranWamt(tempOrderTran.getOrderTranWamt())
-                                .send(true) // 핵심: send를 true로 변경
-                                .build();
-                        
-                        // 업데이트 실행 (내부적으로 WebOrderTran 생성됨)
-                        return tempWebOrderTranService.update(id, updateRequest)
-                                .map(updatedOrderTran -> ResponseEntity.ok(Map.of(
-                                        "message", "임시저장 주문상세가 정식 주문상세로 변환되었습니다.",
-                                        "orderTranKey", updatedOrderTran.getOrderTranKey(),
-                                        "tempOrderTran", updatedOrderTran
-                                )))
-                                .orElse(ResponseEntity.notFound().build());
-                    })
-                    .orElse(ResponseEntity.notFound().build());
-                    
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "주문상세 변환 중 오류가 발생했습니다: " + e.getMessage()));
-        }
+        // 🔥 tempOrderId 없이는 정확한 전송 처리 불가능
+        return ResponseEntity.badRequest()
+                .body(Map.of("error", "tempOrderId 없이는 정확한 식별이 불가능합니다. by-order-number API를 사용하세요."));
     }
 } 

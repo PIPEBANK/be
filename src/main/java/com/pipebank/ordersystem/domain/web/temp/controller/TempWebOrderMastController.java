@@ -2,6 +2,7 @@ package com.pipebank.ordersystem.domain.web.temp.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -102,30 +103,36 @@ public class TempWebOrderMastController {
     }
 
     /**
-     * 주문번호로 조회 
-     * GET /api/web/temp/order-mast/by-order-number/{orderNumber}
+     * 주문번호 + tempOrderId로 상세 조회
+     * GET /api/web/temp/order-mast/by-order-number/{orderNumber}/temp-id/{tempOrderId}
      * 
      * @param orderNumber 주문번호 (형식: "YYYYMMDD-숫자", 예: "20250710-1")
-     * @return TempWebOrderMastResponse
+     * @param tempOrderId 임시주문 ID (중복 구분용)
+     * @return TempWebOrderMastResponse (OrderTran 포함)
      * 
      * 예시:
-     * - GET /api/web/temp/order-mast/by-order-number/20250710-1
-     * - GET /api/web/temp/order-mast/by-order-number/20240315-5
+     * - GET /api/web/temp/order-mast/by-order-number/20250716-1/temp-id/1
+     * - GET /api/web/temp/order-mast/by-order-number/20250716-1/temp-id/2
      */
-    @GetMapping("/by-order-number/{orderNumber}")
-    public ResponseEntity<TempWebOrderMastResponse> findByOrderNumber(@PathVariable String orderNumber) {
-        log.info("주문번호로 임시저장 주문 조회 API 호출 - 주문번호: {}", orderNumber);
+    @GetMapping("/by-order-number/{orderNumber}/temp-id/{tempOrderId}")
+    public ResponseEntity<TempWebOrderMastResponse> findByOrderNumberAndTempId(
+            @PathVariable String orderNumber,
+            @PathVariable Integer tempOrderId) {
         
-        return tempWebOrderMastService.findByOrderNumber(orderNumber)
+        log.info("주문번호+TempOrderId로 임시저장 주문 상세 조회 API 호출 - 주문번호: {}, TempOrderId: {}", 
+                orderNumber, tempOrderId);
+        
+        return tempWebOrderMastService.findByOrderNumberAndTempId(orderNumber, tempOrderId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * 주문번호로 통합 수정 (OrderMast + OrderTran 한 번에 처리)
-     * PUT /api/web/temp/order-mast/by-order-number/{orderNumber}/with-trans
+     * 주문번호 + tempOrderId로 통합 수정 (OrderMast + OrderTran 한 번에 처리)
+     * PUT /api/web/temp/order-mast/by-order-number/{orderNumber}/temp-id/{tempOrderId}/with-trans
      * 
      * @param orderNumber 주문번호 (형식: "YYYYMMDD-숫자", 예: "20250710-1")
+     * @param tempOrderId 임시주문 ID (중복 구분용)
      * @param request 수정 요청 데이터
      * @return 수정된 TempWebOrderMastResponse (OrderTran 포함)
      * 
@@ -134,23 +141,43 @@ public class TempWebOrderMastController {
      * 2. 수정 후 전송: send=true로 수정된 데이터 전송
      * 
      * 예시:
-     * - PUT /api/web/temp/order-mast/by-order-number/20250710-1/with-trans
+     * - PUT /api/web/temp/order-mast/by-order-number/20250710-1/temp-id/1/with-trans
      * - Body: { "send": false, "orderTrans": [...] } // 임시저장 재저장
      * - Body: { "send": true, "orderTrans": [...] } // 수정 후 전송
      */
+    @PutMapping("/by-order-number/{orderNumber}/temp-id/{tempOrderId}/with-trans")
+    public ResponseEntity<TempWebOrderMastResponse> updateWithTransByOrderNumberAndTempId(
+            @PathVariable String orderNumber,
+            @PathVariable Integer tempOrderId,
+            @RequestBody TempWebOrderMastCreateRequest request) {
+        
+        log.info("주문번호+TempOrderId로 통합 수정 API 호출 - 주문번호: {}, TempOrderId: {}, send: {}", 
+                orderNumber, tempOrderId, request.getSend());
+        
+        return tempWebOrderMastService.updateWithTransByOrderNumberAndTempId(orderNumber, tempOrderId, request)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * 🔥 Deprecated: 주문번호로만 수정 (중복 데이터 식별 불가)
+     * 기존 호환성을 위해 유지하되, 새로운 API 사용 권장
+     */
+    @Deprecated
     @PutMapping("/by-order-number/{orderNumber}/with-trans")
     public ResponseEntity<TempWebOrderMastResponse> updateWithTransByOrderNumber(
             @PathVariable String orderNumber,
             @RequestBody TempWebOrderMastCreateRequest request) {
         
-        log.info("주문번호로 통합 수정 API 호출 - 주문번호: {}, send: {}", orderNumber, request.getSend());
+        log.warn("🔥 Deprecated API 호출: by-order-number만으로 수정 - 주문번호: {}", orderNumber);
+        log.warn("권장: PUT /api/web/temp/order-mast/by-order-number/{orderNumber}/temp-id/{tempOrderId}/with-trans");
         
         return tempWebOrderMastService.updateWithTransByOrderNumber(orderNumber, request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 수정
+    // 수정 (🔥 Deprecated - tempOrderId 없이는 정확한 식별 불가능, by-order-number API 사용 권장)
     @PutMapping("/{orderMastDate}/{orderMastSosok}/{orderMastUjcd}/{orderMastAcno}")
     public ResponseEntity<TempWebOrderMastResponse> update(
             @PathVariable String orderMastDate,
@@ -159,15 +186,14 @@ public class TempWebOrderMastController {
             @PathVariable Integer orderMastAcno,
             @RequestBody TempWebOrderMastCreateRequest request) {
         
-        TempWebOrderMast.TempWebOrderMastId id = new TempWebOrderMast.TempWebOrderMastId(
-                orderMastDate, orderMastSosok, orderMastUjcd, orderMastAcno);
-        
-        return tempWebOrderMastService.update(id, request)
+        // 🔥 주문번호로 최신 데이터 조회 후 수정하는 방식으로 변경
+        String orderNumber = orderMastDate + "-" + orderMastAcno;
+        return tempWebOrderMastService.updateWithTransByOrderNumber(orderNumber, request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 삭제
+    // 삭제 (🔥 Deprecated - tempOrderId 없이는 정확한 식별 불가능)
     @DeleteMapping("/{orderMastDate}/{orderMastSosok}/{orderMastUjcd}/{orderMastAcno}")
     public ResponseEntity<Void> delete(
             @PathVariable String orderMastDate,
@@ -175,14 +201,25 @@ public class TempWebOrderMastController {
             @PathVariable String orderMastUjcd,
             @PathVariable Integer orderMastAcno) {
         
-        TempWebOrderMast.TempWebOrderMastId id = new TempWebOrderMast.TempWebOrderMastId(
-                orderMastDate, orderMastSosok, orderMastUjcd, orderMastAcno);
-        
-        boolean deleted = tempWebOrderMastService.delete(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+        // 🔥 주문번호로 최신 데이터 조회 후 삭제하는 방식으로 변경
+        String orderNumber = orderMastDate + "-" + orderMastAcno;
+        return tempWebOrderMastService.findByOrderNumber(orderNumber)
+                .map(order -> {
+                    TempWebOrderMast.TempWebOrderMastId id = new TempWebOrderMast.TempWebOrderMastId(
+                            order.getOrderMastDate(),
+                            order.getOrderMastSosok(),
+                            order.getOrderMastUjcd(),
+                            order.getOrderMastAcno(),
+                            order.getTempOrderId() // 🔥 TempOrderId 포함
+                    );
+                    
+                    boolean deleted = tempWebOrderMastService.delete(id);
+                    return deleted ? ResponseEntity.noContent().<Void>build() : ResponseEntity.notFound().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // send 상태를 true로 변경하여 WebOrderMast로 변환
+    // send 상태를 true로 변경하여 WebOrderMast로 변환 (🔥 Deprecated - by-order-number API 사용 권장)
     @PatchMapping("/{orderMastDate}/{orderMastSosok}/{orderMastUjcd}/{orderMastAcno}/send")
     public ResponseEntity<?> markAsSent(
             @PathVariable String orderMastDate,
@@ -190,12 +227,12 @@ public class TempWebOrderMastController {
             @PathVariable String orderMastUjcd,
             @PathVariable Integer orderMastAcno) {
         
-        TempWebOrderMast.TempWebOrderMastId id = new TempWebOrderMast.TempWebOrderMastId(
-                orderMastDate, orderMastSosok, orderMastUjcd, orderMastAcno);
+        // 🔥 주문번호로 최신 데이터 조회 후 처리하는 방식으로 변경
+        String orderNumber = orderMastDate + "-" + orderMastAcno;
         
         try {
             // 현재 임시저장 데이터 조회
-            return tempWebOrderMastService.findById(id)
+            return tempWebOrderMastService.findByOrderNumber(orderNumber)
                     .map(tempOrder -> {
                         if (Boolean.TRUE.equals(tempOrder.getSend())) {
                             return ResponseEntity.badRequest()
@@ -233,7 +270,8 @@ public class TempWebOrderMastController {
                                 .build();
                         
                         // 업데이트 실행 (내부적으로 WebOrderMast 생성됨)
-                        return tempWebOrderMastService.update(id, updateRequest)
+                        Optional<TempWebOrderMastResponse> updateResult = tempWebOrderMastService.updateWithTransByOrderNumber(orderNumber, updateRequest);
+                        return updateResult
                                 .map(updatedOrder -> ResponseEntity.ok(Map.of(
                                         "message", "임시저장 주문이 정식 주문으로 변환되었습니다.",
                                         "orderKey", updatedOrder.getOrderKey(),

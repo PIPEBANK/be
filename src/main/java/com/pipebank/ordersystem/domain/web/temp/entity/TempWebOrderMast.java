@@ -35,6 +35,10 @@ public class TempWebOrderMast {
     @Column(name = "ORDER_MAST_ACNO", columnDefinition = "int(10)", nullable = false)
     private Integer orderMastAcno;
 
+    @Id
+    @Column(name = "TEMP_ORDER_ID", columnDefinition = "int(10)", nullable = false)
+    private Integer tempOrderId; // 🔥 임시주문 고유ID (중복 방지용)
+
     // === 기존 WebOrderMast와 완전히 동일한 필드들 ===
     @Column(name = "ORDER_MAST_CUST", columnDefinition = "int(10)", nullable = false)
     private Integer orderMastCust; //거래처
@@ -122,7 +126,7 @@ public class TempWebOrderMast {
     private LocalDateTime updatedAt; // 임시저장 수정일시
 
     @Builder
-    public TempWebOrderMast(String orderMastDate, Integer orderMastSosok, String orderMastUjcd, Integer orderMastAcno,
+    public TempWebOrderMast(String orderMastDate, Integer orderMastSosok, String orderMastUjcd, Integer orderMastAcno, Integer tempOrderId,
                     Integer orderMastCust, Integer orderMastScust, Integer orderMastSawon, Integer orderMastSawonBuse,
                     String orderMastOdate, Integer orderMastProject, String orderMastRemark,
                     LocalDateTime orderMastFdate, String orderMastFuser, LocalDateTime orderMastLdate, String orderMastLuser,
@@ -134,6 +138,7 @@ public class TempWebOrderMast {
         this.orderMastSosok = orderMastSosok;
         this.orderMastUjcd = orderMastUjcd;
         this.orderMastAcno = orderMastAcno;
+        this.tempOrderId = tempOrderId;
         this.orderMastCust = orderMastCust;
         this.orderMastScust = orderMastScust;
         this.orderMastSawon = orderMastSawon;
@@ -223,12 +228,14 @@ public class TempWebOrderMast {
         private Integer orderMastSosok;
         private String orderMastUjcd;
         private Integer orderMastAcno;
+        private Integer tempOrderId; // 🔥 임시주문 고유ID (중복 방지용)
 
-        public TempWebOrderMastId(String orderMastDate, Integer orderMastSosok, String orderMastUjcd, Integer orderMastAcno) {
+        public TempWebOrderMastId(String orderMastDate, Integer orderMastSosok, String orderMastUjcd, Integer orderMastAcno, Integer tempOrderId) {
             this.orderMastDate = orderMastDate;
             this.orderMastSosok = orderMastSosok;
             this.orderMastUjcd = orderMastUjcd;
             this.orderMastAcno = orderMastAcno;
+            this.tempOrderId = tempOrderId;
         }
 
         @Override
@@ -241,7 +248,8 @@ public class TempWebOrderMast {
             if (!orderMastDate.equals(that.orderMastDate)) return false;
             if (!orderMastSosok.equals(that.orderMastSosok)) return false;
             if (!orderMastUjcd.equals(that.orderMastUjcd)) return false;
-            return orderMastAcno.equals(that.orderMastAcno);
+            if (!orderMastAcno.equals(that.orderMastAcno)) return false;
+            return tempOrderId.equals(that.tempOrderId);
         }
 
         @Override
@@ -250,6 +258,7 @@ public class TempWebOrderMast {
             result = 31 * result + orderMastSosok.hashCode();
             result = 31 * result + orderMastUjcd.hashCode();
             result = 31 * result + orderMastAcno.hashCode();
+            result = 31 * result + tempOrderId.hashCode();
             return result;
         }
     }

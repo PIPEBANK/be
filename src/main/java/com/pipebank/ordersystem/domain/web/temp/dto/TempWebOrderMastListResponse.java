@@ -33,6 +33,11 @@ public class TempWebOrderMastListResponse {
     private String orderMastDate;
     
     /**
+     * 🔥 임시주문 ID (tempOrderId) - 중복 주문번호 구분용
+     */
+    private Integer tempOrderId;
+    
+    /**
      * TempWebOrderMast Entity를 TempWebOrderMastListResponse로 변환
      */
     public static TempWebOrderMastListResponse from(TempWebOrderMast tempWebOrderMast) {
@@ -43,6 +48,7 @@ public class TempWebOrderMastListResponse {
                 .userId(tempWebOrderMast.getUserId())
                 .orderMastComname(tempWebOrderMast.getOrderMastComname())
                 .orderMastDate(tempWebOrderMast.getOrderMastDate())
+                .tempOrderId(tempWebOrderMast.getTempOrderId()) // 🔥 tempOrderId 추가
                 .build();
     }
 } 

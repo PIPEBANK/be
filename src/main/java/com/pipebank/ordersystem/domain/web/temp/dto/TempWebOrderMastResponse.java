@@ -17,6 +17,7 @@ public class TempWebOrderMastResponse {
     private Integer orderMastSosok;
     private String orderMastUjcd;
     private Integer orderMastAcno;
+    private Integer tempOrderId; // 🔥 임시주문 고유ID 추가
     
     // 기본 필드들
     private Integer orderMastCust;
@@ -89,6 +90,7 @@ public class TempWebOrderMastResponse {
         response.orderMastSosok = entity.getOrderMastSosok();
         response.orderMastUjcd = entity.getOrderMastUjcd();
         response.orderMastAcno = entity.getOrderMastAcno();
+        response.tempOrderId = entity.getTempOrderId(); // 🔥 TempOrderId 매핑 추가
         response.orderMastCust = entity.getOrderMastCust();
         response.orderMastScust = entity.getOrderMastScust();
         response.orderMastSawon = entity.getOrderMastSawon();

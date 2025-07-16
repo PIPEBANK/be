@@ -20,6 +20,7 @@ public class TempWebOrderTranCreateRequest {
     private Integer orderTranSosok;
     private String orderTranUjcd;
     private Integer orderTranAcno; // 통합 API에서 자동으로 설정됨
+    private Integer tempOrderId; // 🔥 임시주문 고유ID 추가 (통합 API에서 자동으로 설정됨)
     // orderTranSeq는 자동생성
     
     // 기본 필드들
