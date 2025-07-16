@@ -71,3 +71,5 @@ application.yml
 # Build outputs
 out/
 bin/ 
+
+env-template.sh
