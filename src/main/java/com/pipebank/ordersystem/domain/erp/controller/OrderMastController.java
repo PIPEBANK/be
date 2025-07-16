@@ -36,6 +36,8 @@ public class OrderMastController {
      * - sdiv: 출고형태 (ORDER_MAST_SDIV)
      * - comName: 납품현장명 (부분 검색)
      * 
+     * 정렬: 날짜 최신순 → 같은 날짜 내에서 ACNO 최신순 (큰 숫자부터)
+     * 
      * 예시: 
      * - 특정 날짜: GET /api/erp/orders/customer/9?orderDate=20240101
      * - 날짜 범위: GET /api/erp/orders/customer/9?startDate=20240101&endDate=20240131
@@ -50,7 +52,7 @@ public class OrderMastController {
             @RequestParam(required = false) String orderNumber,
             @RequestParam(required = false) String sdiv,
             @RequestParam(required = false) String comName,
-            @PageableDefault(size = 20, sort = "orderMastDate", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = {"orderMastDate", "orderMastAcno"}, direction = Sort.Direction.DESC) Pageable pageable) {
         
         log.info("거래처별 주문 조회 API 호출 - 거래처ID: {}, 필터: orderDate={}, startDate={}, endDate={}, orderNumber={}, sdiv={}, comName={}", 
                 custId, orderDate, startDate, endDate, orderNumber, sdiv, comName);
@@ -89,6 +91,8 @@ public class OrderMastController {
      * - shipNumber: 출하번호 (부분 검색) 🆕
      * - sdiv: 출고형태 (ORDER_MAST_SDIV)
      * - comName: 납품현장명 (부분 검색)
+     * 
+     * 정렬: 날짜 최신순 → 같은 날짜 내에서 ACNO 최신순 (큰 숫자부터)
      */
     @GetMapping("/shipment/customer/{custId}")
     public ResponseEntity<Page<OrderShipmentResponse>> getShipmentStatusByCustomer(
@@ -100,7 +104,7 @@ public class OrderMastController {
             @RequestParam(required = false) String shipNumber,
             @RequestParam(required = false) String sdiv,
             @RequestParam(required = false) String comName,
-            @PageableDefault(size = 20, sort = "orderMastDate", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = {"orderMastDate", "orderMastAcno"}, direction = Sort.Direction.DESC) Pageable pageable) {
         
         log.info("거래처별 출하진행현황 조회 API 호출 - 거래처ID: {}, 필터: orderDate={}, startDate={}, endDate={}, orderNumber={}, shipNumber={}, sdiv={}, comName={}", 
                 custId, orderDate, startDate, endDate, orderNumber, shipNumber, sdiv, comName);

@@ -1002,15 +1002,21 @@ public class OrderMastService {
         
         long totalCount = statusCounts.values().stream().mapToLong(Long::longValue).sum();
         long completedCount = statusCounts.getOrDefault(STATUS_COMPLETED, 0L);
+        long registeredCount = statusCounts.getOrDefault(STATUS_REGISTERED, 0L);
         
         // 모든 항목이 출하완료인 경우
         if (completedCount == totalCount && totalCount > 0) {
             return STATUS_COMPLETED;
         }
         
-        // 하나라도 수주등록이나 수주진행이 있는 경우
-        if (statusCounts.containsKey(STATUS_REGISTERED) || statusCounts.containsKey(STATUS_IN_PROGRESS)) {
+        // 하나라도 수주진행이 있으면 수주진행
+        if (statusCounts.containsKey(STATUS_IN_PROGRESS)) {
             return STATUS_IN_PROGRESS;
+        }
+        
+        // 모든 항목이 수주등록 상태면 수주등록
+        if (registeredCount == totalCount && totalCount > 0) {
+            return STATUS_REGISTERED;
         }
         
         // 기본값: 수주진행

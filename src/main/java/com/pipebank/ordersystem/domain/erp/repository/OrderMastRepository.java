@@ -125,8 +125,7 @@ public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.
            "(:endDate IS NULL OR o.orderMastDate <= :endDate) AND " +
            "(:orderNumber IS NULL OR CONCAT(o.orderMastDate, '-', o.orderMastAcno) LIKE %:orderNumber%) AND " +
            "(:sdiv IS NULL OR o.orderMastSdiv = :sdiv) AND " +
-           "(:comName IS NULL OR o.orderMastComname LIKE %:comName%) " +
-           "ORDER BY o.orderMastDate DESC, o.orderMastSosok ASC, o.orderMastUjcd ASC, o.orderMastAcno ASC")
+           "(:comName IS NULL OR o.orderMastComname LIKE %:comName%)")
     Page<OrderMast> findByCustomerWithFilters(
             @Param("custId") Integer custId,
             @Param("orderDate") String orderDate,
@@ -150,8 +149,7 @@ public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.
            "(:orderNumber IS NULL OR CONCAT(o.orderMastDate, '-', o.orderMastAcno) LIKE %:orderNumber%) AND " +
            "(:shipNumber IS NULL OR CONCAT(so.shipOrderDate, '-', so.shipOrderAcno) LIKE %:shipNumber%) AND " +
            "(:sdiv IS NULL OR o.orderMastSdiv = :sdiv) AND " +
-           "(:comName IS NULL OR o.orderMastComname LIKE %:comName%) " +
-           "ORDER BY o.orderMastDate DESC, o.orderMastSosok ASC, o.orderMastUjcd ASC, o.orderMastAcno ASC")
+           "(:comName IS NULL OR o.orderMastComname LIKE %:comName%)")
     Page<OrderMast> findByCustomerWithFiltersIncludingShipNumber(
             @Param("custId") Integer custId,
             @Param("orderDate") String orderDate,
