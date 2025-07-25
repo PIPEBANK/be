@@ -30,12 +30,62 @@ public interface ItemCodeRepository extends JpaRepository<ItemCode, Integer> {
         String itemCodeDiv1, String itemCodeDiv2, String itemCodeDiv3, String itemCodeDiv4, 
         Integer itemCodeUse, Integer itemCodeOrder, Pageable pageable);
     
-    // 제품명과 규격을 분리해서 검색
+    // 제품명과 규격을 분리해서 검색 (2중 검색 지원) - AND/OR 연산자 지원
     @Query("SELECT i FROM ItemCode i WHERE " +
            "i.itemCodeUse = 1 AND i.itemCodeOrder = 1 AND " +
-           "(:itemName IS NULL OR :itemName = '' OR i.itemCodeHnam LIKE %:itemName%) AND " +
-           "(:spec IS NULL OR :spec = '' OR i.itemCodeSpec LIKE %:spec%)")
-    Page<ItemCode> searchByNameAndSpec(@Param("itemName") String itemName, 
-                                      @Param("spec") String spec, 
-                                      Pageable pageable);
+           "(:itemName1 IS NULL OR :itemName1 = '' OR i.itemCodeHnam LIKE %:itemName1%) AND " +
+           "(:itemName2 IS NULL OR :itemName2 = '' OR i.itemCodeHnam LIKE %:itemName2%) AND " +
+           "(:spec1 IS NULL OR :spec1 = '' OR i.itemCodeSpec LIKE %:spec1%) AND " +
+           "(:spec2 IS NULL OR :spec2 = '' OR i.itemCodeSpec LIKE %:spec2%)")
+    Page<ItemCode> searchByNameAndSpecWithAndAnd(@Param("itemName1") String itemName1,
+                                                 @Param("itemName2") String itemName2,
+                                                 @Param("spec1") String spec1,
+                                                 @Param("spec2") String spec2,
+                                                 Pageable pageable);
+
+    // 품목명 OR, 규격 AND
+    @Query("SELECT i FROM ItemCode i WHERE " +
+           "i.itemCodeUse = 1 AND i.itemCodeOrder = 1 AND " +
+           "((:itemName1 IS NULL OR :itemName1 = '' OR i.itemCodeHnam LIKE %:itemName1%) OR " +
+           " (:itemName2 IS NULL OR :itemName2 = '' OR i.itemCodeHnam LIKE %:itemName2%)) AND " +
+           "(:spec1 IS NULL OR :spec1 = '' OR i.itemCodeSpec LIKE %:spec1%) AND " +
+           "(:spec2 IS NULL OR :spec2 = '' OR i.itemCodeSpec LIKE %:spec2%)")
+    Page<ItemCode> searchByNameAndSpecWithOrAnd(@Param("itemName1") String itemName1,
+                                                @Param("itemName2") String itemName2,
+                                                @Param("spec1") String spec1,
+                                                @Param("spec2") String spec2,
+                                                Pageable pageable);
+
+    // 품목명 AND, 규격 OR
+    @Query("SELECT i FROM ItemCode i WHERE " +
+           "i.itemCodeUse = 1 AND i.itemCodeOrder = 1 AND " +
+           "(:itemName1 IS NULL OR :itemName1 = '' OR i.itemCodeHnam LIKE %:itemName1%) AND " +
+           "(:itemName2 IS NULL OR :itemName2 = '' OR i.itemCodeHnam LIKE %:itemName2%) AND " +
+           "((:spec1 IS NULL OR :spec1 = '' OR i.itemCodeSpec LIKE %:spec1%) OR " +
+           " (:spec2 IS NULL OR :spec2 = '' OR i.itemCodeSpec LIKE %:spec2%))")
+    Page<ItemCode> searchByNameAndSpecWithAndOr(@Param("itemName1") String itemName1,
+                                                @Param("itemName2") String itemName2,
+                                                @Param("spec1") String spec1,
+                                                @Param("spec2") String spec2,
+                                                Pageable pageable);
+
+    // 품목명 OR, 규격 OR
+    @Query("SELECT i FROM ItemCode i WHERE " +
+           "i.itemCodeUse = 1 AND i.itemCodeOrder = 1 AND " +
+           "((:itemName1 IS NULL OR :itemName1 = '' OR i.itemCodeHnam LIKE %:itemName1%) OR " +
+           " (:itemName2 IS NULL OR :itemName2 = '' OR i.itemCodeHnam LIKE %:itemName2%)) AND " +
+           "((:spec1 IS NULL OR :spec1 = '' OR i.itemCodeSpec LIKE %:spec1%) OR " +
+           " (:spec2 IS NULL OR :spec2 = '' OR i.itemCodeSpec LIKE %:spec2%))")
+    Page<ItemCode> searchByNameAndSpecWithOrOr(@Param("itemName1") String itemName1,
+                                              @Param("itemName2") String itemName2,
+                                              @Param("spec1") String spec1,
+                                              @Param("spec2") String spec2,
+                                              Pageable pageable);
+
+    // 기존 메서드는 AND-AND 조건으로 유지 (하위호환)
+    default Page<ItemCode> searchByNameAndSpec(String itemName1, String itemName2,
+                                              String spec1, String spec2,
+                                              Pageable pageable) {
+        return searchByNameAndSpecWithAndAnd(itemName1, itemName2, spec1, spec2, pageable);
+    }
 } 

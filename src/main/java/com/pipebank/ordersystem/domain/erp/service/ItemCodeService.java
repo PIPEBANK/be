@@ -126,15 +126,35 @@ public class ItemCodeService {
     }
     
     /**
-     * 품목 검색 (제품명과 규격을 분리해서 검색)
+     * 품목 검색 (제품명과 규격을 분리해서 검색) - 2중 검색 및 AND/OR 연산자 지원
      */
-    public Page<ItemSearchResponse> searchItemsByNameAndSpec(String itemName, String spec, 
+    public Page<ItemSearchResponse> searchItemsByNameAndSpec(String itemName1, String itemName2, 
+                                                           String spec1, String spec2,
+                                                           String itemNameOperator, String specOperator,
                                                            int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
+        Page<ItemCode> itemPage;
         
-        Page<ItemCode> itemPage = itemCodeRepository.searchByNameAndSpec(itemName, spec, pageable);
+        // 연산자 조합에 따라 적절한 Repository 메서드 호출
+        boolean itemNameIsOr = "OR".equalsIgnoreCase(itemNameOperator);
+        boolean specIsOr = "OR".equalsIgnoreCase(specOperator);
+        
+        if (!itemNameIsOr && !specIsOr) {
+            // AND, AND
+            itemPage = itemCodeRepository.searchByNameAndSpecWithAndAnd(itemName1, itemName2, spec1, spec2, pageable);
+        } else if (itemNameIsOr && !specIsOr) {
+            // OR, AND
+            itemPage = itemCodeRepository.searchByNameAndSpecWithOrAnd(itemName1, itemName2, spec1, spec2, pageable);
+        } else if (!itemNameIsOr && specIsOr) {
+            // AND, OR
+            itemPage = itemCodeRepository.searchByNameAndSpecWithAndOr(itemName1, itemName2, spec1, spec2, pageable);
+        } else {
+            // OR, OR
+            itemPage = itemCodeRepository.searchByNameAndSpecWithOrOr(itemName1, itemName2, spec1, spec2, pageable);
+        }
+        
         return itemPage.map(this::convertToItemSearchResponse);
     }
     
