@@ -230,7 +230,7 @@ public class CommonCodeController {
     @GetMapping("/display-name/{code}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<String> getDisplayNameByCode(@PathVariable String code) {
-        log.info("코드로 표시명 조회 API 호출 - 코드: {}", code);
+
         String displayName = commonCodeService.getDisplayNameByCode(code);
         return ResponseEntity.ok(displayName);
     }

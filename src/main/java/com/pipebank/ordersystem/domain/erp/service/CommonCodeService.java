@@ -258,8 +258,7 @@ public class CommonCodeService {
      * 코드값으로 표시명 조회 (Customer의 DCOD 변환용)
      */
     public String getDisplayNameByCode(String fullCode) {
-        log.debug("코드로 표시명 조회: {}", fullCode);
-        
+   
         // fullCode 길이에 따라 적절한 테이블에서 검색
         if (fullCode.length() == 3) {
             // Level1 검색

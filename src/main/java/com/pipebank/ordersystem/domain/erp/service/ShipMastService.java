@@ -110,11 +110,6 @@ public class ShipMastService {
 
     /**
      * ShipTran 상태값을 기반으로 출하 상태 계산
-     * 상태 코드:
-     * - 5380010001: 출하등록
-     * - 5380010002: 출하완료
-     * - 5380020001: 출하진행
-     * - 5380030001: 매출확정
      */
     private String calculateShipStatus(ShipMast shipMast) {
         List<String> shipTranStatuses = shipTranRepository.findShipTranStatusByShipKey(
@@ -428,18 +423,23 @@ public class ShipMastService {
     }
 
     /**
-     * 거래처별 현장별 출하조회 (ShipTran 단위, 페이징 + 필터링)
+     * 거래처별 현장별 출하조회 (ShipTran 단위) - 페이징 + 필터링
+     * 🔥 고급 검색: 제품명1 AND/OR 제품명2, 규격1 AND/OR 규격2 지원
      */
     public Page<ShipmentItemResponse> getShipmentItemsByCustomer(
             Integer custId, String shipDate, String startDate, String endDate,
-            String shipNumber, String itemName, String comName, Pageable pageable) {
+            String shipNumber, String orderNumber, String itemName1, String itemName2,
+            String spec1, String spec2, String itemNameOperator, String specOperator,
+            String comName, Pageable pageable) {
         
-        log.info("거래처별 현장별 출하조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, shipNumber={}, itemName={}, comName={}", 
-                custId, shipDate, startDate, endDate, shipNumber, itemName, comName);
+        log.info("거래처별 현장별 출하조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, shipNumber={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, comName={}", 
+                custId, shipDate, startDate, endDate, shipNumber, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, comName);
 
-        // ShipTran 단위로 조회 (중복 제거 없음)
+        // 새로운 Repository 메서드 호출
         Page<Object[]> shipmentData = shipMastRepository.findShipmentItemsByCustomerWithFilters(
-                custId, shipDate, startDate, endDate, shipNumber, itemName, comName, pageable);
+                custId, shipDate, startDate, endDate, shipNumber, orderNumber,
+                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator,
+                comName, pageable);
 
         // Object[] 결과를 ShipmentItemResponse로 변환
         Page<ShipmentItemResponse> responses = shipmentData.map(this::convertToShipmentItemResponse);
@@ -449,35 +449,43 @@ public class ShipMastService {
     }
 
     /**
+     * 🔥 하위호환성을 위한 기존 메서드 (단일 itemName만 지원)
+     */
+    public Page<ShipmentItemResponse> getShipmentItemsByCustomer(
+            Integer custId, String shipDate, String startDate, String endDate,
+            String shipNumber, String orderNumber, String itemName, String comName, Pageable pageable) {
+        
+        // 기존 단일 itemName을 itemName1로 매핑하여 새 메서드 호출
+        return getShipmentItemsByCustomer(custId, shipDate, startDate, endDate, shipNumber, orderNumber,
+                itemName, null, null, null, "AND", "AND", comName, pageable);
+    }
+
+    /**
      * Object[] 결과를 ShipmentItemResponse로 변환
      */
     private ShipmentItemResponse convertToShipmentItemResponse(Object[] result) {
         ShipMast shipMast = (ShipMast) result[0];
         ShipTran shipTran = (ShipTran) result[1];
+        ShipOrder shipOrder = (ShipOrder) result[2]; // 쿼리에서 조인된 ShipOrder (null 가능)
+        OrderMast orderMast = (OrderMast) result[3]; // 쿼리에서 조인된 OrderMast (null 가능)
 
         // 출하번호 생성
         String shipNumber = shipMast.getShipMastDate() + "-" + shipMast.getShipMastAcno();
 
-        // 주문번호 조회 (ShipOrder를 통해)
+        // 주문번호 생성 (OrderMast가 조회된 경우)
         String orderNumber = "";
-        try {
-            List<ShipOrder> shipOrders = shipOrderRepository.findByShipKeyAndSeq(
-                    shipMast.getShipMastDate(),
-                    shipMast.getShipMastSosok(),
-                    shipMast.getShipMastUjcd(),
-                    shipMast.getShipMastAcno(),
-                    shipTran.getShipTranSeq()
-            );
+        if (orderMast != null) {
+            orderNumber = orderMast.getOrderMastDate() + "-" + orderMast.getOrderMastAcno();
+        }
 
-            if (!shipOrders.isEmpty()) {
-                ShipOrder shipOrder = shipOrders.get(0);
-                orderNumber = shipOrder.getShipOrderOdate() + "-" + shipOrder.getShipOrderOacno();
+        // 🔥 차량톤수 표시명 조회 (CommonCode3에서)
+        String cartonDisplayName = "";
+        if (shipMast.getShipMastCarton() != null && !shipMast.getShipMastCarton().trim().isEmpty()) {
+            try {
+                cartonDisplayName = commonCodeService.getDisplayNameByCode(shipMast.getShipMastCarton());
+            } catch (Exception e) {
+                log.warn("차량톤수 코드 조회 실패: {}", shipMast.getShipMastCarton(), e);
             }
-        } catch (Exception e) {
-            log.warn("주문번호 조회 실패 - ShipMast: {}-{}-{}-{}, ShipTranSeq: {}", 
-                    shipMast.getShipMastDate(), shipMast.getShipMastSosok(), 
-                    shipMast.getShipMastUjcd(), shipMast.getShipMastAcno(), 
-                    shipTran.getShipTranSeq(), e);
         }
 
         return ShipmentItemResponse.builder()
@@ -490,6 +498,13 @@ public class ShipMastService {
                 .shipTranDate(shipTran.getShipTranDate())
                 .shipTranCnt(shipTran.getShipTranCnt())
                 .shipTranTot(shipTran.getShipTranTot())
+                // 🔥 새로 추가된 운송 관련 정보
+                .shipMastCarno(shipMast.getShipMastCarno())
+                .shipMastTname(shipMast.getShipMastTname())
+                .shipMastTtel(shipMast.getShipMastTtel())
+                .shipMastCarton(shipMast.getShipMastCarton())
+                .shipMastCartonDisplayName(cartonDisplayName)
+                // 기존 추가 정보
                 .shipMastCust(shipMast.getShipMastCust())
                 .shipTranSeq(shipTran.getShipTranSeq())
                 .build();

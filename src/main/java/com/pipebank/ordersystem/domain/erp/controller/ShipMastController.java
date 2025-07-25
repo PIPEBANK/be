@@ -161,15 +161,26 @@ public class ShipMastController {
      * - startDate: 시작 출고일자 (범위 조회)
      * - endDate: 종료 출고일자 (범위 조회)
      * - shipNumber: 출하번호 (부분 검색)
-     * - itemName: 제품명 (부분 검색)
+     * - orderNumber: 주문번호 (부분 검색)
+     * - itemName1: 제품명1 (부분 검색) 🆕
+     * - itemName2: 제품명2 (부분 검색) 🆕
+     * - spec1: 규격1 (부분 검색) 🆕
+     * - spec2: 규격2 (부분 검색) 🆕
+     * - itemNameOperator: 제품명 검색 연산자 (AND/OR, 기본값: AND) 🆕
+     * - specOperator: 규격 검색 연산자 (AND/OR, 기본값: AND) 🆕
+     * - itemName: 제품명 (하위호환성용, itemName1로 매핑됨)
      * - comName: 현장명 (부분 검색)
      * 
      * 응답 정보:
-     * - 현장명, 출하번호, 제품명, 규격, 단위, 출고일자, 수량, 단가
+     * - 현장명, 출하번호, 주문번호, 제품명, 규격, 단위, 출고일자, 수량, 단가
+     * - 차량번호, 운송기사명, 운송회사전화, 차량톤수코드, 차량톤수명
      * 
      * 예시: 
      * - GET /api/erp/shipments/items/customer/9?startDate=20240101&endDate=20240131
      * - GET /api/erp/shipments/items/customer/9?shipNumber=20240315-123&itemName=파이프
+     * - GET /api/erp/shipments/items/customer/9?orderNumber=20240731-6
+     * - GET /api/erp/shipments/items/customer/9?itemName1=가스관&itemName2=파이프&itemNameOperator=OR 🆕
+     * - GET /api/erp/shipments/items/customer/9?spec1=63&spec2=75&specOperator=OR 🆕
      */
     @GetMapping("/items/customer/{custId}")
     public ResponseEntity<Page<ShipmentItemResponse>> getShipmentItemsByCustomer(
@@ -178,15 +189,28 @@ public class ShipMastController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) String shipNumber,
+            @RequestParam(required = false) String orderNumber,
+            @RequestParam(required = false) String itemName1,
+            @RequestParam(required = false) String itemName2,
+            @RequestParam(required = false) String spec1,
+            @RequestParam(required = false) String spec2,
+            // 🔥 하위호환성을 위한 기존 파라미터명 지원
             @RequestParam(required = false) String itemName,
+            @RequestParam(defaultValue = "AND") String itemNameOperator,  // AND 또는 OR
+            @RequestParam(defaultValue = "AND") String specOperator,      // AND 또는 OR
             @RequestParam(required = false) String comName,
             @PageableDefault(size = 20, sort = "shipMastDate", direction = Sort.Direction.DESC) Pageable pageable) {
         
-        log.info("거래처별 현장별 출하조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, shipNumber={}, itemName={}, comName={}", 
-                custId, shipDate, startDate, endDate, shipNumber, itemName, comName);
+        // 🔥 하위호환성 처리: 기존 itemName 파라미터가 넘어오면 itemName1로 매핑
+        String finalItemName1 = itemName1 != null ? itemName1 : itemName;
+        
+        log.info("거래처별 현장별 출하조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, shipNumber={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, comName={}", 
+                custId, shipDate, startDate, endDate, shipNumber, orderNumber, finalItemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, comName);
         
         Page<ShipmentItemResponse> response = shipMastService.getShipmentItemsByCustomer(
-                custId, shipDate, startDate, endDate, shipNumber, itemName, comName, pageable);
+                custId, shipDate, startDate, endDate, shipNumber, orderNumber,
+                finalItemName1, itemName2, spec1, spec2, itemNameOperator, specOperator,
+                comName, pageable);
         return ResponseEntity.ok(response);
     }
 } 

@@ -23,7 +23,14 @@ public class ShipmentItemResponse {
     private BigDecimal shipTranCnt;         // 수량 (SHIP_TRAN_CNT)
     private BigDecimal shipTranTot;         // 단가 (SHIP_TRAN_TOT)
     
-    // 추가 정보 (필요시)
+    // 🔥 추가된 운송 관련 정보
+    private String shipMastCarno;           // 차량번호 (SHIP_MAST_CARNO)
+    private String shipMastTname;           // 운송기사명 (SHIP_MAST_TNAME)
+    private String shipMastTtel;            // 운송회사전화 (SHIP_MAST_TTEL)
+    private String shipMastCarton;          // 차량톤수 코드 (SHIP_MAST_CARTON)
+    private String shipMastCartonDisplayName; // 차량톤수명 (CommonCode3에서 조회)
+    
+    // 추가 정보 (기존)
     private Integer shipMastCust;           // 거래처코드
     private Integer shipTranSeq;            // ShipTran 순번
 } 

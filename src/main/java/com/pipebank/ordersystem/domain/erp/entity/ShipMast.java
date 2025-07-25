@@ -90,7 +90,7 @@ public class ShipMast {
     private BigDecimal shipMastShipping; // 운송비
 
     @Column(name = "SHIP_MAST_CARTON", columnDefinition = "char(10)", nullable = true)
-    private String shipMastCarton; // 포장구분
+    private String shipMastCarton; // 차량톤수량톤수
 
     @Column(name = "SHIP_MAST_COMADDR1", length = 100, nullable = true)
     private String shipMastComaddr1; // 현장주소1
