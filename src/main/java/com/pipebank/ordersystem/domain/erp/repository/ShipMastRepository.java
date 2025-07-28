@@ -1,6 +1,7 @@
 package com.pipebank.ordersystem.domain.erp.repository;
 
-import com.pipebank.ordersystem.domain.erp.entity.ShipMast;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.pipebank.ordersystem.domain.erp.entity.ShipMast;
 
 @Repository
 public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.ShipMastId> {
@@ -353,4 +354,283 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
                 itemName1, itemName2, spec1, spec2, comName, pageable);
         }
     }
+
+    /**
+     * 🔥 주문-출하 통합 상세 조회 (페이징 + 2중 필터링)
+     * OrderMast + OrderTran + ItemCode + ShipTran 통합 조회
+     * 
+     * @param custId 거래처ID (ORDER_MAST_CUST 기준)
+     * @param shipDate 출하일자 (정확 일치)
+     * @param startDate 시작일자 (범위 조회)
+     * @param endDate 종료일자 (범위 조회)
+     * @param orderNumber 주문번호 (부분 검색)
+     * @param itemName1 품명1 (부분 검색)
+     * @param itemName2 품명2 (부분 검색)
+     * @param spec1 규격1 (부분 검색)
+     * @param spec2 규격2 (부분 검색)
+     * @param itemNameOperator 품명 검색 연산자 (AND/OR)
+     * @param specOperator 규격 검색 연산자 (AND/OR)
+     * @param siteName 현장명 (부분 검색)
+     * @param pageable 페이징 정보
+     * @return 통합 조회 결과 (17개 필드)
+     */
+    default Page<Object[]> findOrderShipmentDetailByCustomer(
+            Integer custId, String shipDate, String startDate, String endDate, String orderNumber,
+            String itemName1, String itemName2, String spec1, String spec2,
+            String itemNameOperator, String specOperator, String siteName, Pageable pageable) {
+        
+        // 품명 연산자에 따른 분기
+        boolean itemNameAnd = "AND".equalsIgnoreCase(itemNameOperator);
+        boolean specAnd = "AND".equalsIgnoreCase(specOperator);
+        
+        if (itemNameAnd && specAnd) {
+            // AND, AND
+            return findOrderShipmentDetailByCustomerAndAnd(
+                custId, shipDate, startDate, endDate, orderNumber,
+                itemName1, itemName2, spec1, spec2, siteName, pageable);
+        } else if (!itemNameAnd && specAnd) {
+            // OR, AND
+            return findOrderShipmentDetailByCustomerOrAnd(
+                custId, shipDate, startDate, endDate, orderNumber,
+                itemName1, itemName2, spec1, spec2, siteName, pageable);
+        } else if (itemNameAnd && !specAnd) {
+            // AND, OR
+            return findOrderShipmentDetailByCustomerAndOr(
+                custId, shipDate, startDate, endDate, orderNumber,
+                itemName1, itemName2, spec1, spec2, siteName, pageable);
+        } else {
+            // OR, OR
+            return findOrderShipmentDetailByCustomerOrOr(
+                custId, shipDate, startDate, endDate, orderNumber,
+                itemName1, itemName2, spec1, spec2, siteName, pageable);
+        }
+    }
+
+    // 🔥 품명 AND, 규격 AND
+    @Query("""
+        SELECT 
+            om.orderMastDate,
+            om.orderMastAcno,
+            om.orderMastOdate,
+            ot.orderTranStau,
+            ic.itemCodeNum,
+            ot.orderTranDeta,
+            ot.orderTranSpec,
+            ot.orderTranUnit,
+            om.orderMastComname,
+            om.orderMastDcust,
+            ot.orderTranCnt,
+            ot.orderTranAmt,
+            ot.orderTranDcPer,
+            ot.orderTranTot,
+            COALESCE(SUM(st.shipTranCnt), 0),
+            cc3.commCod3Hnam
+        FROM OrderMast om
+        INNER JOIN OrderTran ot ON om.orderMastDate = ot.orderTranDate 
+            AND om.orderMastSosok = ot.orderTranSosok 
+            AND om.orderMastUjcd = ot.orderTranUjcd 
+            AND om.orderMastAcno = ot.orderTranAcno
+        LEFT JOIN ItemCode ic ON ot.orderTranItem = ic.itemCodeCode
+        LEFT JOIN ShipOrder so ON ot.orderTranDate = so.shipOrderOdate 
+            AND ot.orderTranSosok = so.shipOrderSosok 
+            AND ot.orderTranUjcd = so.shipOrderUjcd 
+            AND ot.orderTranAcno = so.shipOrderOacno 
+            AND ot.orderTranSeq = so.shipOrderOseq
+        LEFT JOIN ShipTran st ON so.shipOrderDate = st.shipTranDate 
+            AND so.shipOrderSosok = st.shipTranSosok 
+            AND so.shipOrderUjcd = st.shipTranUjcd 
+            AND so.shipOrderAcno = st.shipTranAcno 
+            AND so.shipOrderSeq = st.shipTranSeq
+        LEFT JOIN CommonCode3 cc3 ON ot.orderTranStau = cc3.commCod3Code
+        WHERE om.orderMastCust = :custId
+        AND (:shipDate IS NULL OR om.orderMastDate = :shipDate)
+        AND (:startDate IS NULL OR om.orderMastDate >= :startDate)
+        AND (:endDate IS NULL OR om.orderMastDate <= :endDate)
+        AND (:orderNumber IS NULL OR CONCAT(om.orderMastDate, '-', om.orderMastAcno) LIKE %:orderNumber%)
+        AND (:itemName1 IS NULL OR ot.orderTranDeta LIKE %:itemName1%)
+        AND (:itemName2 IS NULL OR ot.orderTranDeta LIKE %:itemName2%)
+        AND (:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%)
+        AND (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%)
+        AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
+        GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
+                 om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
+                 ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
+                 om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, 
+                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam
+        """)
+    Page<Object[]> findOrderShipmentDetailByCustomerAndAnd(
+        @Param("custId") Integer custId,
+        @Param("shipDate") String shipDate,
+        @Param("startDate") String startDate,
+        @Param("endDate") String endDate,
+        @Param("orderNumber") String orderNumber,
+        @Param("itemName1") String itemName1,
+        @Param("itemName2") String itemName2,
+        @Param("spec1") String spec1,
+        @Param("spec2") String spec2,
+        @Param("siteName") String siteName,
+        Pageable pageable
+    );
+
+    // 🔥 품명 OR, 규격 AND
+    @Query("""
+        SELECT 
+            om.orderMastDate, om.orderMastAcno, om.orderMastOdate, ot.orderTranStau,
+            ic.itemCodeNum, ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
+            om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, ot.orderTranAmt, 
+            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam
+        FROM OrderMast om
+        INNER JOIN OrderTran ot ON om.orderMastDate = ot.orderTranDate 
+            AND om.orderMastSosok = ot.orderTranSosok 
+            AND om.orderMastUjcd = ot.orderTranUjcd 
+            AND om.orderMastAcno = ot.orderTranAcno
+        LEFT JOIN ItemCode ic ON ot.orderTranItem = ic.itemCodeCode
+        LEFT JOIN ShipOrder so ON ot.orderTranDate = so.shipOrderOdate 
+            AND ot.orderTranSosok = so.shipOrderSosok 
+            AND ot.orderTranUjcd = so.shipOrderUjcd 
+            AND ot.orderTranAcno = so.shipOrderOacno 
+            AND ot.orderTranSeq = so.shipOrderOseq
+        LEFT JOIN ShipTran st ON so.shipOrderDate = st.shipTranDate 
+            AND so.shipOrderSosok = st.shipTranSosok 
+            AND so.shipOrderUjcd = st.shipTranUjcd 
+            AND so.shipOrderAcno = st.shipTranAcno 
+            AND so.shipOrderSeq = st.shipTranSeq
+        LEFT JOIN CommonCode3 cc3 ON ot.orderTranStau = cc3.commCod3Code
+        WHERE om.orderMastCust = :custId
+        AND (:shipDate IS NULL OR om.orderMastDate = :shipDate)
+        AND (:startDate IS NULL OR om.orderMastDate >= :startDate)
+        AND (:endDate IS NULL OR om.orderMastDate <= :endDate)
+        AND (:orderNumber IS NULL OR CONCAT(om.orderMastDate, '-', om.orderMastAcno) LIKE %:orderNumber%)
+        AND ((:itemName1 IS NULL OR ot.orderTranDeta LIKE %:itemName1%) 
+             OR (:itemName2 IS NULL OR ot.orderTranDeta LIKE %:itemName2%))
+        AND (:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%)
+        AND (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%)
+        AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
+        GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
+                 om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
+                 ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
+                 om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, 
+                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam
+        """)
+    Page<Object[]> findOrderShipmentDetailByCustomerOrAnd(
+        @Param("custId") Integer custId,
+        @Param("shipDate") String shipDate,
+        @Param("startDate") String startDate,
+        @Param("endDate") String endDate,
+        @Param("orderNumber") String orderNumber,
+        @Param("itemName1") String itemName1,
+        @Param("itemName2") String itemName2,
+        @Param("spec1") String spec1,
+        @Param("spec2") String spec2,
+        @Param("siteName") String siteName,
+        Pageable pageable
+    );
+
+    // 🔥 품명 AND, 규격 OR
+    @Query("""
+        SELECT 
+            om.orderMastDate, om.orderMastAcno, om.orderMastOdate, ot.orderTranStau,
+            ic.itemCodeNum, ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
+            om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, ot.orderTranAmt, 
+            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam
+        FROM OrderMast om
+        INNER JOIN OrderTran ot ON om.orderMastDate = ot.orderTranDate 
+            AND om.orderMastSosok = ot.orderTranSosok 
+            AND om.orderMastUjcd = ot.orderTranUjcd 
+            AND om.orderMastAcno = ot.orderTranAcno
+        LEFT JOIN ItemCode ic ON ot.orderTranItem = ic.itemCodeCode
+        LEFT JOIN ShipOrder so ON ot.orderTranDate = so.shipOrderOdate 
+            AND ot.orderTranSosok = so.shipOrderSosok 
+            AND ot.orderTranUjcd = so.shipOrderUjcd 
+            AND ot.orderTranAcno = so.shipOrderOacno 
+            AND ot.orderTranSeq = so.shipOrderOseq
+        LEFT JOIN ShipTran st ON so.shipOrderDate = st.shipTranDate 
+            AND so.shipOrderSosok = st.shipTranSosok 
+            AND so.shipOrderUjcd = st.shipTranUjcd 
+            AND so.shipOrderAcno = st.shipTranAcno 
+            AND so.shipOrderSeq = st.shipTranSeq
+        LEFT JOIN CommonCode3 cc3 ON ot.orderTranStau = cc3.commCod3Code
+        WHERE om.orderMastCust = :custId
+        AND (:shipDate IS NULL OR om.orderMastDate = :shipDate)
+        AND (:startDate IS NULL OR om.orderMastDate >= :startDate)
+        AND (:endDate IS NULL OR om.orderMastDate <= :endDate)
+        AND (:orderNumber IS NULL OR CONCAT(om.orderMastDate, '-', om.orderMastAcno) LIKE %:orderNumber%)
+        AND (:itemName1 IS NULL OR ot.orderTranDeta LIKE %:itemName1%)
+        AND (:itemName2 IS NULL OR ot.orderTranDeta LIKE %:itemName2%)
+        AND ((:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%) 
+             OR (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%))
+        AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
+        GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
+                 om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
+                 ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
+                 om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, 
+                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam
+        """)
+    Page<Object[]> findOrderShipmentDetailByCustomerAndOr(
+        @Param("custId") Integer custId,
+        @Param("shipDate") String shipDate,
+        @Param("startDate") String startDate,
+        @Param("endDate") String endDate,
+        @Param("orderNumber") String orderNumber,
+        @Param("itemName1") String itemName1,
+        @Param("itemName2") String itemName2,
+        @Param("spec1") String spec1,
+        @Param("spec2") String spec2,
+        @Param("siteName") String siteName,
+        Pageable pageable
+    );
+
+    // 🔥 품명 OR, 규격 OR
+    @Query("""
+        SELECT 
+            om.orderMastDate, om.orderMastAcno, om.orderMastOdate, ot.orderTranStau,
+            ic.itemCodeNum, ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
+            om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, ot.orderTranAmt, 
+            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam
+        FROM OrderMast om
+        INNER JOIN OrderTran ot ON om.orderMastDate = ot.orderTranDate 
+            AND om.orderMastSosok = ot.orderTranSosok 
+            AND om.orderMastUjcd = ot.orderTranUjcd 
+            AND om.orderMastAcno = ot.orderTranAcno
+        LEFT JOIN ItemCode ic ON ot.orderTranItem = ic.itemCodeCode
+        LEFT JOIN ShipOrder so ON ot.orderTranDate = so.shipOrderOdate 
+            AND ot.orderTranSosok = so.shipOrderSosok 
+            AND ot.orderTranUjcd = so.shipOrderUjcd 
+            AND ot.orderTranAcno = so.shipOrderOacno 
+            AND ot.orderTranSeq = so.shipOrderOseq
+        LEFT JOIN ShipTran st ON so.shipOrderDate = st.shipTranDate 
+            AND so.shipOrderSosok = st.shipTranSosok 
+            AND so.shipOrderUjcd = st.shipTranUjcd 
+            AND so.shipOrderAcno = st.shipTranAcno 
+            AND so.shipOrderSeq = st.shipTranSeq
+        LEFT JOIN CommonCode3 cc3 ON ot.orderTranStau = cc3.commCod3Code
+        WHERE om.orderMastCust = :custId
+        AND (:shipDate IS NULL OR om.orderMastDate = :shipDate)
+        AND (:startDate IS NULL OR om.orderMastDate >= :startDate)
+        AND (:endDate IS NULL OR om.orderMastDate <= :endDate)
+        AND (:orderNumber IS NULL OR CONCAT(om.orderMastDate, '-', om.orderMastAcno) LIKE %:orderNumber%)
+        AND ((:itemName1 IS NULL OR ot.orderTranDeta LIKE %:itemName1%) 
+             OR (:itemName2 IS NULL OR ot.orderTranDeta LIKE %:itemName2%))
+        AND ((:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%) 
+             OR (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%))
+        AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
+        GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
+                 om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
+                 ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
+                 om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, 
+                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam
+        """)
+    Page<Object[]> findOrderShipmentDetailByCustomerOrOr(
+        @Param("custId") Integer custId,
+        @Param("shipDate") String shipDate,
+        @Param("startDate") String startDate,
+        @Param("endDate") String endDate,
+        @Param("orderNumber") String orderNumber,
+        @Param("itemName1") String itemName1,
+        @Param("itemName2") String itemName2,
+        @Param("spec1") String spec1,
+        @Param("spec2") String spec2,
+        @Param("siteName") String siteName,
+        Pageable pageable
+    );
 } 

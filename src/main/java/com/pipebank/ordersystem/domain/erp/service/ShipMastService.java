@@ -1,37 +1,40 @@
 package com.pipebank.ordersystem.domain.erp.service;
 
-import com.pipebank.ordersystem.domain.erp.dto.ShipMastListResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipmentDetailResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipSlipResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipSlipSummaryResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipSlipListResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipmentItemResponse;
-import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
-import com.pipebank.ordersystem.domain.erp.entity.ShipMast;
-import com.pipebank.ordersystem.domain.erp.entity.ShipTran;
-import com.pipebank.ordersystem.domain.erp.entity.ShipOrder;
-import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
-import com.pipebank.ordersystem.domain.erp.repository.ShipMastRepository;
-import com.pipebank.ordersystem.domain.erp.repository.ShipTranRepository;
-import com.pipebank.ordersystem.domain.erp.repository.ShipOrderRepository;
-import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
-import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
-import com.pipebank.ordersystem.domain.erp.repository.CustomerRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.ArrayList;
-import org.springframework.data.domain.PageImpl;
+import com.pipebank.ordersystem.domain.erp.dto.OrderShipmentDetailResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipMastListResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipSlipListResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipSlipResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipSlipSummaryResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipmentDetailResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipmentItemResponse;
+import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
+import com.pipebank.ordersystem.domain.erp.entity.OrderTran;
+import com.pipebank.ordersystem.domain.erp.entity.ShipMast;
+import com.pipebank.ordersystem.domain.erp.entity.ShipOrder;
+import com.pipebank.ordersystem.domain.erp.entity.ShipTran;
+import com.pipebank.ordersystem.domain.erp.repository.CustomerRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ItemCodeRepository;
+import com.pipebank.ordersystem.domain.erp.repository.OrderTranRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ShipMastRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ShipOrderRepository;
+import com.pipebank.ordersystem.domain.erp.repository.ShipTranRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -519,5 +522,44 @@ public class ShipMastService {
                 shipMast.getShipMastSosok(), 
                 shipMast.getShipMastUjcd(), 
                 shipMast.getShipMastAcno());
+    }
+
+    /**
+     * 🔥 주문-출하 통합 상세 조회 (페이징 + 2중 필터링)
+     * OrderMast + OrderTran + ItemCode + ShipTran 통합 조회
+     * 
+     * @param custId 거래처ID (ORDER_MAST_CUST 기준)
+     * @param shipDate 출하일자 (정확 일치)
+     * @param startDate 시작일자 (범위 조회)
+     * @param endDate 종료일자 (범위 조회)
+     * @param orderNumber 주문번호 (부분 검색)
+     * @param itemName1 품명1 (부분 검색)
+     * @param itemName2 품명2 (부분 검색)
+     * @param spec1 규격1 (부분 검색)
+     * @param spec2 규격2 (부분 검색)
+     * @param itemNameOperator 품명 검색 연산자 (AND/OR)
+     * @param specOperator 규격 검색 연산자 (AND/OR)
+     * @param siteName 현장명 (부분 검색)
+     * @param pageable 페이징 정보
+     * @return 통합 조회 결과 (17개 필드)
+     */
+    public Page<OrderShipmentDetailResponse> getOrderShipmentDetailByCustomer(
+            Integer custId, String shipDate, String startDate, String endDate, String orderNumber,
+            String itemName1, String itemName2, String spec1, String spec2,
+            String itemNameOperator, String specOperator, String siteName, Pageable pageable) {
+        
+        log.info("주문-출하 통합 상세 조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, siteName={}", 
+                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName);
+        
+        // Repository에서 복잡한 JOIN 쿼리 실행
+        Page<Object[]> rawData = shipMastRepository.findOrderShipmentDetailByCustomer(
+                custId, shipDate, startDate, endDate, orderNumber,
+                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, pageable);
+        
+        // Object[] 배열을 OrderShipmentDetailResponse로 변환
+        Page<OrderShipmentDetailResponse> responses = rawData.map(OrderShipmentDetailResponse::from);
+        
+        log.info("주문-출하 통합 상세 조회 완료 - 총 {}건", responses.getTotalElements());
+        return responses;
     }
 } 

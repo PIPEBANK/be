@@ -1,22 +1,29 @@
 package com.pipebank.ordersystem.domain.erp.controller;
 
-import com.pipebank.ordersystem.domain.erp.dto.ShipMastListResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipmentDetailResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipSlipResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipSlipSummaryResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipSlipListResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipmentItemResponse;
-import com.pipebank.ordersystem.domain.erp.service.ShipMastService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.pipebank.ordersystem.domain.erp.dto.OrderShipmentDetailResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipMastListResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipSlipListResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipSlipResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipSlipSummaryResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipmentDetailResponse;
+import com.pipebank.ordersystem.domain.erp.dto.ShipmentItemResponse;
+import com.pipebank.ordersystem.domain.erp.service.ShipMastService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/erp/shipments")
@@ -211,6 +218,67 @@ public class ShipMastController {
                 custId, shipDate, startDate, endDate, shipNumber, orderNumber,
                 finalItemName1, itemName2, spec1, spec2, itemNameOperator, specOperator,
                 comName, pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 🔥 주문-출하 통합 상세 조회 (페이징 + 2중 필터링)
+     * GET /api/erp/shipments/order-shipment-detail/customer/{custId}
+     * 
+     * OrderMast + OrderTran + ItemCode + ShipTran 완전 통합 조회
+     * 17개 필드 모든 정보 제공 (주문정보 + 품목정보 + 현장정보 + 수주정보 + 출하정보)
+     * 
+     * 필터링 파라미터:
+     * - shipDate: 출하일자 (정확 일치)
+     * - startDate: 시작일자 (범위 조회)
+     * - endDate: 종료일자 (범위 조회)
+     * - orderNumber: 주문번호 (부분 검색)
+     * - itemName1: 품명1 (부분 검색) 🆕
+     * - itemName2: 품명2 (부분 검색) 🆕
+     * - spec1: 규격1 (부분 검색) 🆕
+     * - spec2: 규격2 (부분 검색) 🆕
+     * - itemNameOperator: 품명 검색 연산자 (AND/OR, 기본값: AND) 🆕
+     * - specOperator: 규격 검색 연산자 (AND/OR, 기본값: AND) 🆕
+     * - siteName: 현장명 (부분 검색) 🆕
+     * 
+     * 응답 정보 (17개 필드):
+     * - 주문정보: 주문일자, 주문번호, 납기일자, 상태, 상태명
+     * - 품목정보: 품번, 품명, 규격, 단위  
+     * - 현장정보: 납품현장명, 수요처
+     * - 수주정보: 수주수량, 판매단가, 할인율, 주문금액
+     * - 출하정보: 출하수량, 미출하수량, 미출하금액
+     * 
+     * 정렬: 주문번호(주문일자+ACNO) 최신순
+     * 
+     * 예시: 
+     * - GET /api/erp/shipments/order-shipment-detail/customer/9?startDate=20240101&endDate=20240131
+     * - GET /api/erp/shipments/order-shipment-detail/customer/9?orderNumber=20240731-6
+     * - GET /api/erp/shipments/order-shipment-detail/customer/9?itemName1=가스관&itemName2=파이프&itemNameOperator=OR 🆕
+     * - GET /api/erp/shipments/order-shipment-detail/customer/9?spec1=63&spec2=75&specOperator=OR 🆕
+     * - GET /api/erp/shipments/order-shipment-detail/customer/9?siteName=대화도시가스 🆕
+     */
+    @GetMapping("/order-shipment-detail/customer/{custId}")
+    public ResponseEntity<Page<OrderShipmentDetailResponse>> getOrderShipmentDetailByCustomer(
+            @PathVariable Integer custId,
+            @RequestParam(required = false) String shipDate,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String orderNumber,
+            @RequestParam(required = false) String itemName1,
+            @RequestParam(required = false) String itemName2,
+            @RequestParam(required = false) String spec1,
+            @RequestParam(required = false) String spec2,
+            @RequestParam(defaultValue = "AND") String itemNameOperator,  // AND 또는 OR
+            @RequestParam(defaultValue = "AND") String specOperator,      // AND 또는 OR
+            @RequestParam(required = false) String siteName,
+            @PageableDefault(size = 20, sort = {"orderMastDate", "orderMastAcno"}, direction = Sort.Direction.DESC) Pageable pageable) {
+        
+        log.info("주문-출하 통합 상세 조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, siteName={}", 
+                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName);
+        
+        Page<OrderShipmentDetailResponse> response = shipMastService.getOrderShipmentDetailByCustomer(
+                custId, shipDate, startDate, endDate, orderNumber,
+                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, pageable);
         return ResponseEntity.ok(response);
     }
 } 
