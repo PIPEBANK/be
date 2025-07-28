@@ -37,6 +37,9 @@ public class OrderDetailResponse {
     // ===== OrderTran 정보 =====
     private List<OrderTranDetailResponse> orderTranList;   // 주문 상세 목록
     private BigDecimal orderTranTotalAmount;               // 주문 총 금액 (orderTranTot 합계)
+    
+    // ===== 🔥 미출고 정보 =====
+    private BigDecimal pendingTotalAmount;                 // 미출고금액 총액 (각 Tran의 pendingAmount 합계)
 
     /**
      * OrderMast 엔티티에서 기본 정보 변환

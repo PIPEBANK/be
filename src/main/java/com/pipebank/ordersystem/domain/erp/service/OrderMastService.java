@@ -495,6 +495,12 @@ public class OrderMastService {
                     .filter(amount -> amount != null)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
+            // 🔥 미출고금액 총액 계산 (각 Tran의 pendingAmount 합계)
+            BigDecimal pendingTotalAmount = orderTranResponses.stream()
+                    .map(OrderTranDetailResponse::getPendingAmount)
+                    .filter(amount -> amount != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
             response = OrderDetailResponse.builder()
                     .orderNumber(response.getOrderNumber())
                     .orderMastDate(response.getOrderMastDate())
@@ -515,6 +521,7 @@ public class OrderMastService {
                     .orderMastRemark(response.getOrderMastRemark())
                     .orderTranList(orderTranResponses)
                     .orderTranTotalAmount(totalAmount)
+                    .pendingTotalAmount(pendingTotalAmount)  // 🔥 미출고금액 총액
                     .build();
         }
         
@@ -706,6 +713,12 @@ public class OrderMastService {
                     orderTran.getOrderTranItem(), e);
         }
         
+        // ===== 🔥 미출고 정보 계산 =====
+        BigDecimal orderQuantity = orderTran.getOrderTranCnt() != null ? orderTran.getOrderTranCnt() : BigDecimal.ZERO;
+        BigDecimal pendingQuantity = orderQuantity.subtract(shipQuantity); // 미출고수량 = 주문량 - 출하량
+        BigDecimal unitPrice = orderTran.getOrderTranAmt() != null ? orderTran.getOrderTranAmt() : BigDecimal.ZERO;
+        BigDecimal pendingAmount = pendingQuantity.multiply(unitPrice); // 미출고금액 = 미출고수량 × 단가
+
         return OrderTranDetailResponse.builder()
                 .itemCodeNum(itemCodeNum)                       // 제품코드
                 .orderTranItem(orderTran.getOrderTranItem())    // 제품번호 (FK)
@@ -715,11 +728,13 @@ public class OrderMastService {
                 .orderTranCnt(orderTran.getOrderTranCnt())      // 수량
                 .orderTranDcPer(orderTran.getOrderTranDcPer())  // DC(%)
                 .orderTranAmt(orderTran.getOrderTranAmt())      // 단가
-                .orderTranTot(orderTran.getOrderTranTot())      // 금액
-                .orderTranStau(orderTran.getOrderTranStau())    // 상태코드
+                .orderTranTot(orderTran.getOrderTranTot())      // 금액              .orderTranStau(orderTran.getOrderTranStau())    // 상태코드
                 .orderTranStauDisplayName(statusDisplayName)   // 상태코드명
                 .shipNumber(shipNumber)                         // 출하번호
                 .shipQuantity(shipQuantity)                     // 출하량
+                // 🔥 미출고 정보
+                .pendingQuantity(pendingQuantity)               // 미출고수량
+                .pendingAmount(pendingAmount)                   // 미출고금액
                 .build();
     }
 

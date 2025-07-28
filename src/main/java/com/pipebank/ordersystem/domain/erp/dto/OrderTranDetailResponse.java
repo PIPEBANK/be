@@ -27,4 +27,8 @@ public class OrderTranDetailResponse {
     // ===== 출하정보 =====
     private String shipNumber;                      // 출하번호 (SHIP_ORDER_DATE + "-" + SHIP_ORDER_ACNO)
     private BigDecimal shipQuantity;                // 출하량 (SHIP_TRAN_CNT)
+    
+    // ===== 🔥 미출고 정보 =====
+    private BigDecimal pendingQuantity;             // 미출고수량 (orderTranCnt - shipQuantity)
+    private BigDecimal pendingAmount;               // 미출고금액 (미출고수량 × orderTranAmt)
 } 
