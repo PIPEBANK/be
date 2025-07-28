@@ -240,6 +240,8 @@ public class ShipMastController {
      * - itemNameOperator: 품명 검색 연산자 (AND/OR, 기본값: AND) 🆕
      * - specOperator: 규격 검색 연산자 (AND/OR, 기본값: AND) 🆕
      * - siteName: 현장명 (부분 검색) 🆕
+     * - excludeCompleted: 완료 내역 제외 여부 (true/false, 기본값: false) 🆕
+     * - statusFilter: 특정 상태만 조회 (선택적) 🆕
      * 
      * 응답 정보 (17개 필드):
      * - 주문정보: 주문일자, 주문번호, 납기일자, 상태, 상태명
@@ -256,6 +258,8 @@ public class ShipMastController {
      * - GET /api/erp/shipments/order-shipment-detail/customer/9?itemName1=가스관&itemName2=파이프&itemNameOperator=OR 🆕
      * - GET /api/erp/shipments/order-shipment-detail/customer/9?spec1=63&spec2=75&specOperator=OR 🆕
      * - GET /api/erp/shipments/order-shipment-detail/customer/9?siteName=대화도시가스 🆕
+     * - GET /api/erp/shipments/order-shipment-detail/customer/9?excludeCompleted=true 🆕 (완료 제외)
+     * - GET /api/erp/shipments/order-shipment-detail/customer/9?statusFilter=4010020001 🆕 (수주진행만)
      */
     @GetMapping("/order-shipment-detail/customer/{custId}")
     public ResponseEntity<Page<OrderShipmentDetailResponse>> getOrderShipmentDetailByCustomer(
@@ -271,14 +275,17 @@ public class ShipMastController {
             @RequestParam(defaultValue = "AND") String itemNameOperator,  // AND 또는 OR
             @RequestParam(defaultValue = "AND") String specOperator,      // AND 또는 OR
             @RequestParam(required = false) String siteName,
+            @RequestParam(defaultValue = "false") boolean excludeCompleted,  // 완료 제외
+            @RequestParam(required = false) String statusFilter,             // 특정 상태
             @PageableDefault(size = 20, sort = {"orderMastDate", "orderMastAcno"}, direction = Sort.Direction.DESC) Pageable pageable) {
         
-        log.info("주문-출하 통합 상세 조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, siteName={}", 
-                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName);
+        log.info("주문-출하 통합 상세 조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, siteName={}, excludeCompleted={}, statusFilter={}", 
+                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, excludeCompleted, statusFilter);
         
         Page<OrderShipmentDetailResponse> response = shipMastService.getOrderShipmentDetailByCustomer(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, pageable);
+                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, 
+                excludeCompleted, statusFilter, pageable);
         return ResponseEntity.ok(response);
     }
 } 

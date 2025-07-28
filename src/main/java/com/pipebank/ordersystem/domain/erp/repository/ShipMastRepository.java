@@ -371,13 +371,16 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
      * @param itemNameOperator 품명 검색 연산자 (AND/OR)
      * @param specOperator 규격 검색 연산자 (AND/OR)
      * @param siteName 현장명 (부분 검색)
+     * @param excludeCompleted 완료 내역 제외 여부
+     * @param statusFilter 특정 상태만 조회
      * @param pageable 페이징 정보
      * @return 통합 조회 결과 (17개 필드)
      */
     default Page<Object[]> findOrderShipmentDetailByCustomer(
             Integer custId, String shipDate, String startDate, String endDate, String orderNumber,
             String itemName1, String itemName2, String spec1, String spec2,
-            String itemNameOperator, String specOperator, String siteName, Pageable pageable) {
+            String itemNameOperator, String specOperator, String siteName,
+            boolean excludeCompleted, String statusFilter, Pageable pageable) {
         
         // 품명 연산자에 따른 분기
         boolean itemNameAnd = "AND".equalsIgnoreCase(itemNameOperator);
@@ -387,22 +390,22 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
             // AND, AND
             return findOrderShipmentDetailByCustomerAndAnd(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, siteName, pageable);
+                itemName1, itemName2, spec1, spec2, siteName, excludeCompleted, statusFilter, pageable);
         } else if (!itemNameAnd && specAnd) {
             // OR, AND
             return findOrderShipmentDetailByCustomerOrAnd(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, siteName, pageable);
+                itemName1, itemName2, spec1, spec2, siteName, excludeCompleted, statusFilter, pageable);
         } else if (itemNameAnd && !specAnd) {
             // AND, OR
             return findOrderShipmentDetailByCustomerAndOr(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, siteName, pageable);
+                itemName1, itemName2, spec1, spec2, siteName, excludeCompleted, statusFilter, pageable);
         } else {
             // OR, OR
             return findOrderShipmentDetailByCustomerOrOr(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, siteName, pageable);
+                itemName1, itemName2, spec1, spec2, siteName, excludeCompleted, statusFilter, pageable);
         }
     }
 
@@ -452,6 +455,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND (:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%)
         AND (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%)
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
+        AND (:excludeCompleted = false OR ot.orderTranStau != '4010030001')
+        AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
         GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
                  ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
@@ -469,6 +474,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("spec1") String spec1,
         @Param("spec2") String spec2,
         @Param("siteName") String siteName,
+        @Param("excludeCompleted") boolean excludeCompleted,
+        @Param("statusFilter") String statusFilter,
         Pageable pageable
     );
 
@@ -506,6 +513,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND (:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%)
         AND (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%)
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
+        AND (:excludeCompleted = false OR ot.orderTranStau != '4010030001')
+        AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
         GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
                  ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
@@ -523,6 +532,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("spec1") String spec1,
         @Param("spec2") String spec2,
         @Param("siteName") String siteName,
+        @Param("excludeCompleted") boolean excludeCompleted,
+        @Param("statusFilter") String statusFilter,
         Pageable pageable
     );
 
@@ -560,6 +571,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND ((:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%) 
              OR (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%))
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
+        AND (:excludeCompleted = false OR ot.orderTranStau != '4010030001')
+        AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
         GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
                  ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
@@ -577,6 +590,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("spec1") String spec1,
         @Param("spec2") String spec2,
         @Param("siteName") String siteName,
+        @Param("excludeCompleted") boolean excludeCompleted,
+        @Param("statusFilter") String statusFilter,
         Pageable pageable
     );
 
@@ -614,6 +629,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND ((:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%) 
              OR (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%))
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
+        AND (:excludeCompleted = false OR ot.orderTranStau != '4010030001')
+        AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
         GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
                  ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
@@ -631,6 +648,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("spec1") String spec1,
         @Param("spec2") String spec2,
         @Param("siteName") String siteName,
+        @Param("excludeCompleted") boolean excludeCompleted,
+        @Param("statusFilter") String statusFilter,
         Pageable pageable
     );
 } 

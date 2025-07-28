@@ -540,21 +540,25 @@ public class ShipMastService {
      * @param itemNameOperator 품명 검색 연산자 (AND/OR)
      * @param specOperator 규격 검색 연산자 (AND/OR)
      * @param siteName 현장명 (부분 검색)
+     * @param excludeCompleted 완료 내역 제외 여부
+     * @param statusFilter 특정 상태만 조회
      * @param pageable 페이징 정보
      * @return 통합 조회 결과 (17개 필드)
      */
     public Page<OrderShipmentDetailResponse> getOrderShipmentDetailByCustomer(
             Integer custId, String shipDate, String startDate, String endDate, String orderNumber,
             String itemName1, String itemName2, String spec1, String spec2,
-            String itemNameOperator, String specOperator, String siteName, Pageable pageable) {
+            String itemNameOperator, String specOperator, String siteName,
+            boolean excludeCompleted, String statusFilter, Pageable pageable) {
         
-        log.info("주문-출하 통합 상세 조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, siteName={}", 
-                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName);
+        log.info("주문-출하 통합 상세 조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, siteName={}, excludeCompleted={}, statusFilter={}", 
+                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, excludeCompleted, statusFilter);
         
         // Repository에서 복잡한 JOIN 쿼리 실행
         Page<Object[]> rawData = shipMastRepository.findOrderShipmentDetailByCustomer(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, pageable);
+                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName,
+                excludeCompleted, statusFilter, pageable);
         
         // Object[] 배열을 OrderShipmentDetailResponse로 변환
         Page<OrderShipmentDetailResponse> responses = rawData.map(OrderShipmentDetailResponse::from);
@@ -562,4 +566,4 @@ public class ShipMastService {
         log.info("주문-출하 통합 상세 조회 완료 - 총 {}건", responses.getTotalElements());
         return responses;
     }
-} 
+}
