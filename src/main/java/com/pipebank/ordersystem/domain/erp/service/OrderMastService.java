@@ -728,6 +728,8 @@ public class OrderMastService {
                 .orderTranCnt(orderTran.getOrderTranCnt())      // 수량
                 .orderTranDcPer(orderTran.getOrderTranDcPer())  // DC(%)
                 .orderTranAmt(orderTran.getOrderTranAmt())      // 단가
+                .orderTranNet(orderTran.getOrderTranNet())      // 공급가
+                .orderTranVat(orderTran.getOrderTranVat())      // 부가세
                 .orderTranTot(orderTran.getOrderTranTot())      // 금액              .orderTranStau(orderTran.getOrderTranStau())    // 상태코드
                 .orderTranStauDisplayName(statusDisplayName)   // 상태코드명
                 .shipNumber(shipNumber)                         // 출하번호

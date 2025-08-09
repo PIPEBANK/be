@@ -427,7 +427,9 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
             ot.orderTranDcPer,
             ot.orderTranTot,
             COALESCE(SUM(st.shipTranCnt), 0),
-            cc3.commCod3Hnam
+            cc3.commCod3Hnam,
+            ot.orderTranNet,
+            ot.orderTranVat
         FROM OrderMast om
         INNER JOIN OrderTran ot ON om.orderMastDate = ot.orderTranDate 
             AND om.orderMastSosok = ot.orderTranSosok 
@@ -461,7 +463,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
                  ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
                  om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, 
-                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam
+                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam,
+                 ot.orderTranNet, ot.orderTranVat
         """)
     Page<Object[]> findOrderShipmentDetailByCustomerAndAnd(
         @Param("custId") Integer custId,
@@ -485,7 +488,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
             om.orderMastDate, om.orderMastAcno, om.orderMastOdate, ot.orderTranStau,
             ic.itemCodeNum, ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
             om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, ot.orderTranAmt, 
-            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam
+            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam,
+            ot.orderTranNet, ot.orderTranVat
         FROM OrderMast om
         INNER JOIN OrderTran ot ON om.orderMastDate = ot.orderTranDate 
             AND om.orderMastSosok = ot.orderTranSosok 
@@ -519,7 +523,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
                  ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
                  om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, 
-                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam
+                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam,
+                 ot.orderTranNet, ot.orderTranVat
         """)
     Page<Object[]> findOrderShipmentDetailByCustomerOrAnd(
         @Param("custId") Integer custId,
@@ -543,7 +548,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
             om.orderMastDate, om.orderMastAcno, om.orderMastOdate, ot.orderTranStau,
             ic.itemCodeNum, ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
             om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, ot.orderTranAmt, 
-            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam
+            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam,
+            ot.orderTranNet, ot.orderTranVat
         FROM OrderMast om
         INNER JOIN OrderTran ot ON om.orderMastDate = ot.orderTranDate 
             AND om.orderMastSosok = ot.orderTranSosok 
@@ -577,7 +583,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
                  ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
                  om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, 
-                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam
+                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam,
+                 ot.orderTranNet, ot.orderTranVat
         """)
     Page<Object[]> findOrderShipmentDetailByCustomerAndOr(
         @Param("custId") Integer custId,
@@ -601,7 +608,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
             om.orderMastDate, om.orderMastAcno, om.orderMastOdate, ot.orderTranStau,
             ic.itemCodeNum, ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
             om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, ot.orderTranAmt, 
-            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam
+            ot.orderTranDcPer, ot.orderTranTot, COALESCE(SUM(st.shipTranCnt), 0), cc3.commCod3Hnam,
+            ot.orderTranNet, ot.orderTranVat
         FROM OrderMast om
         INNER JOIN OrderTran ot ON om.orderMastDate = ot.orderTranDate 
             AND om.orderMastSosok = ot.orderTranSosok 
@@ -635,7 +643,8 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
                  ot.orderTranDeta, ot.orderTranSpec, ot.orderTranUnit,
                  om.orderMastComname, om.orderMastDcust, ot.orderTranCnt, 
-                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam
+                 ot.orderTranAmt, ot.orderTranDcPer, ot.orderTranTot, cc3.commCod3Hnam,
+                 ot.orderTranNet, ot.orderTranVat
         """)
     Page<Object[]> findOrderShipmentDetailByCustomerOrOr(
         @Param("custId") Integer custId,

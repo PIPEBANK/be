@@ -20,6 +20,8 @@ public class OrderTranDetailResponse {
     private BigDecimal orderTranCnt;                // 수량
     private BigDecimal orderTranDcPer;              // DC(%)
     private BigDecimal orderTranAmt;                // 단가
+    private BigDecimal orderTranNet;                // 공급가
+    private BigDecimal orderTranVat;                // 부가세
     private BigDecimal orderTranTot;                // 금액
     private String orderTranStau;                   // 상태코드
     private String orderTranStauDisplayName;        // 상태코드명

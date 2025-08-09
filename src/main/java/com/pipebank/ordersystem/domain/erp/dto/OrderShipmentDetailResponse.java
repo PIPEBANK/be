@@ -35,6 +35,8 @@ public class OrderShipmentDetailResponse {
     private BigDecimal unitPrice;       // 판매단가 (orderTranAmt)
     private BigDecimal discountRate;    // 할인율 (orderTranDcPer)
     private BigDecimal orderAmount;     // 주문금액 (orderTranTot)
+    private BigDecimal orderTranNet;    // 공급가 (orderTranNet)
+    private BigDecimal orderTranVat;    // 부가세 (orderTranVat)
     
     // 출하 정보
     private BigDecimal shipQuantity;    // 출하수량 (shipTranCnt)
@@ -53,7 +55,7 @@ public class OrderShipmentDetailResponse {
         // 4: itemCodeNum, 5: orderTranDeta, 6: orderTranSpec, 7: orderTranUnit
         // 8: orderMastComname, 9: orderMastDcust
         // 10: orderTranCnt, 11: orderTranAmt, 12: orderTranDcPer, 13: orderTranTot
-        // 14: shipTranCnt, 15: statusDisplayName
+        // 14: shipTranCnt, 15: statusDisplayName, 16: orderTranNet, 17: orderTranVat
         
         String orderDate = (String) result[0];
         Integer orderAcno = (Integer) result[1];
@@ -88,6 +90,8 @@ public class OrderShipmentDetailResponse {
                 .shipQuantity(shipQuantity)
                 .pendingQuantity(pendingQuantity)
                 .pendingAmount(pendingAmount)
+                .orderTranNet((BigDecimal) result[16])
+                .orderTranVat((BigDecimal) result[17])
                 .build();
     }
 } 
