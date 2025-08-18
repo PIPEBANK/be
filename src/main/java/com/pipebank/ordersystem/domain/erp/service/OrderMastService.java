@@ -713,8 +713,12 @@ public class OrderMastService {
         // ===== 🔥 미출고 정보 계산 =====
         BigDecimal orderQuantity = orderTran.getOrderTranCnt() != null ? orderTran.getOrderTranCnt() : BigDecimal.ZERO;
         BigDecimal pendingQuantity = orderQuantity.subtract(shipQuantity); // 미출고수량 = 주문량 - 출하량
+        
+        // 🆕 과출하된 경우(음수) 미출고 금액에 포함하지 않음 (0으로 처리)
+        pendingQuantity = pendingQuantity.max(BigDecimal.ZERO);
+        
         BigDecimal unitPrice = orderTran.getOrderTranAmt() != null ? orderTran.getOrderTranAmt() : BigDecimal.ZERO;
-        BigDecimal pendingAmount = pendingQuantity.multiply(unitPrice); // 미출고금액 = 미출고수량 × 단가
+        BigDecimal pendingAmount = pendingQuantity.multiply(unitPrice); // 미출고금액 = max(0, 미출고수량) × 단가
 
         return OrderTranDetailResponse.builder()
                 .itemCodeNum(itemCodeNum)                       // 제품코드
@@ -1379,9 +1383,13 @@ public class OrderMastService {
                     log.warn("출하량 조회 실패 - OrderTran: {}", orderTran.getOrderTranSeq(), e);
                 }
                 
-                // 미출고 금액 계산: (주문수량 - 출하수량) × 단가
+                // 미출고 금액 계산: max(0, 주문수량 - 출하수량) × 단가
                 BigDecimal orderQuantity = orderTran.getOrderTranCnt() != null ? orderTran.getOrderTranCnt() : BigDecimal.ZERO;
                 BigDecimal pendingQuantity = orderQuantity.subtract(shipQuantity);
+                
+                // 🆕 과출하된 경우(음수) 미출고 금액에 포함하지 않음 (0으로 처리)
+                pendingQuantity = pendingQuantity.max(BigDecimal.ZERO);
+                
                 BigDecimal unitPrice = orderTran.getOrderTranAmt() != null ? orderTran.getOrderTranAmt() : BigDecimal.ZERO;
                 BigDecimal pendingAmount = pendingQuantity.multiply(unitPrice);
                 
