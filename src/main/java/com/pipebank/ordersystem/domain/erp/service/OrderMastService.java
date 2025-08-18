@@ -178,26 +178,23 @@ public class OrderMastService {
     }
 
     /**
-     * 거래처별 주문 목록 조회 (페이징 + 필터링) - 성능 최적화용
+     * 거래처별 주문 목록 조회 (페이징 + 필터링) - 성능 최적화용 + 금액 정보 포함
      */
     public Page<OrderMastListResponse> getOrdersByCustomerWithFiltersForList(Integer custId, String orderDate, 
                                                                             String startDate, String endDate,
                                                                             String orderNumber, String sdiv, String comName, 
                                                                             Pageable pageable) {
-        log.info("거래처별 주문 목록 조회 요청 (필터링 최적화) - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
+        log.info("거래처별 주문 목록 조회 요청 (필터링 최적화 + 금액) - 거래처ID: {}, 주문일자: {}, 범위: {}-{}, 주문번호: {}, 출고형태: {}, 현장명: {}", 
                 custId, orderDate, startDate, endDate, orderNumber, sdiv, comName);
         
-        Page<OrderMast> orders = orderMastRepository.findByCustomerWithFilters(
+        // 🆕 집계 쿼리로 한 번에 주문 + 금액 정보 조회
+        Page<Object[]> orderSummaries = orderMastRepository.findOrderSummaryByCustomerWithFilters(
                 custId, orderDate, startDate, endDate, orderNumber, sdiv, comName, pageable);
         
-        // 배치 상태 계산을 한 번만 수행 (거래처별 간단한 방식 사용)
-        Map<String, String> statusMap = calculateBatchStatusByCustomer(custId, orders.getContent());
+        // Object[] → OrderMastListResponse 변환
+        Page<OrderMastListResponse> responses = orderSummaries.map(this::convertOrderSummaryToListResponse);
         
-        // 상태 정보를 포함한 변환
-        Page<OrderMastListResponse> responses = orders.map(orderMast -> 
-                convertToListResponseWithPreCalculatedStatus(orderMast, statusMap));
-        
-        log.info("거래처별 주문 목록 조회 완료 (필터링 최적화) - 총 {}건", responses.getTotalElements());
+        log.info("거래처별 주문 목록 조회 완료 (필터링 최적화 + 금액) - 총 {}건", responses.getTotalElements());
         return responses;
     }
 
@@ -1307,5 +1304,94 @@ public class OrderMastService {
     public boolean existsOrderMast(String orderMastDate, Integer orderMastSosok, String orderMastUjcd, Integer orderMastAcno) {
         OrderMast.OrderMastId id = new OrderMast.OrderMastId(orderMastDate, orderMastSosok, orderMastUjcd, orderMastAcno);
         return orderMastRepository.existsById(id);
+    }
+
+    /**
+     * 🆕 집계 쿼리 결과(Object[])를 OrderMastListResponse로 변환
+     * Object[] 구조: [0]=OrderMast, [1]=totalAmount
+     * 미출고 금액은 별도 계산 (기존 방식과 동일한 정확성 보장)
+     */
+    private OrderMastListResponse convertOrderSummaryToListResponse(Object[] result) {
+        OrderMast orderMast = (OrderMast) result[0];
+        BigDecimal totalAmount = (BigDecimal) result[1];
+        
+        // 출고형태명 조회
+        String sdivDisplayName = getDisplayNameSafely(orderMast.getOrderMastSdiv());
+        
+        // 주문 상태 계산
+        String status = calculateSingleOrderStatus(orderMast);
+        String statusDisplayName = "";
+        if (!status.isEmpty()) {
+            try {
+                statusDisplayName = commonCodeService.getDisplayNameByCode(status);
+            } catch (Exception e) {
+                log.warn("상태 코드 조회 실패: {}", status, e);
+                statusDisplayName = "";
+            }
+        }
+        
+        // 🆕 미출고 금액 계산 (기존 상세조회와 동일한 로직)
+        BigDecimal pendingAmount = calculatePendingAmountForOrder(orderMast);
+        
+        // 🆕 금액 정보를 포함한 응답 생성
+        return OrderMastListResponse.fromWithAmounts(
+                orderMast,
+                sdivDisplayName,
+                status,
+                statusDisplayName,
+                totalAmount,
+                pendingAmount
+        );
+    }
+
+    /**
+     * 🆕 특정 주문의 미출고 금액 계산 (기존 상세조회와 동일한 로직)
+     */
+    private BigDecimal calculatePendingAmountForOrder(OrderMast orderMast) {
+        try {
+            // 해당 주문의 OrderTran들 조회
+            List<OrderTran> orderTrans = orderTranRepository.findByOrderMastKey(
+                    orderMast.getOrderMastDate(),
+                    orderMast.getOrderMastSosok(),
+                    orderMast.getOrderMastUjcd(),
+                    orderMast.getOrderMastAcno()
+            );
+            
+            BigDecimal pendingTotal = BigDecimal.ZERO;
+            
+            for (OrderTran orderTran : orderTrans) {
+                // 각 OrderTran별 출하량 조회 (기존과 동일한 방식)
+                BigDecimal shipQuantity = BigDecimal.ZERO;
+                try {
+                    List<ShipTran> shipTrans = shipTranRepository.findByOrderKeyAndItem(
+                            orderTran.getOrderTranDate(),
+                            orderTran.getOrderTranSosok(),
+                            orderTran.getOrderTranUjcd(),
+                            orderTran.getOrderTranAcno(),
+                            orderTran.getOrderTranItem()
+                    );
+                    
+                    shipQuantity = shipTrans.stream()
+                            .map(ShipTran::getShipTranCnt)
+                            .filter(cnt -> cnt != null)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                } catch (Exception e) {
+                    log.warn("출하량 조회 실패 - OrderTran: {}", orderTran.getOrderTranSeq(), e);
+                }
+                
+                // 미출고 금액 계산: (주문수량 - 출하수량) × 단가
+                BigDecimal orderQuantity = orderTran.getOrderTranCnt() != null ? orderTran.getOrderTranCnt() : BigDecimal.ZERO;
+                BigDecimal pendingQuantity = orderQuantity.subtract(shipQuantity);
+                BigDecimal unitPrice = orderTran.getOrderTranAmt() != null ? orderTran.getOrderTranAmt() : BigDecimal.ZERO;
+                BigDecimal pendingAmount = pendingQuantity.multiply(unitPrice);
+                
+                pendingTotal = pendingTotal.add(pendingAmount);
+            }
+            
+            return pendingTotal;
+        } catch (Exception e) {
+            log.warn("미출고 금액 계산 실패 - OrderMast: {}", orderMast.getOrderKey(), e);
+            return BigDecimal.ZERO;
+        }
     }
 } 

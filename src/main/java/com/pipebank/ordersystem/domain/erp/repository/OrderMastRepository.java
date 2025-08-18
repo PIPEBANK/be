@@ -1,6 +1,8 @@
 package com.pipebank.ordersystem.domain.erp.repository;
 
-import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,8 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
 
 @Repository
 public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.OrderMastId> {
@@ -218,4 +219,38 @@ public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.
     Integer findMaxAcnoByDateAndSosokAndUjcd(@Param("orderDate") String orderDate, 
                                             @Param("sosok") Integer sosok, 
                                             @Param("ujcd") String ujcd);
+
+    /**
+     * 🆕 거래처별 주문 목록 + 총 금액 조회 (필터링 지원) - 단계별 구현
+     * 1단계: OrderMast별 총 금액만 집계 (미출고 금액은 서비스에서 계산)
+     * 
+     * 결과 Object[] 구조:
+     * [0]: OrderMast 엔티티
+     * [1]: orderTranTotalAmount (BigDecimal) - 주문 총 금액
+     */
+    @Query("SELECT o, COALESCE(SUM(ot.orderTranTot), 0) as totalAmount " +
+           "FROM OrderMast o " +
+           "LEFT JOIN OrderTran ot ON " +
+           "   o.orderMastDate = ot.orderTranDate AND " +
+           "   o.orderMastSosok = ot.orderTranSosok AND " +
+           "   o.orderMastUjcd = ot.orderTranUjcd AND " +
+           "   o.orderMastAcno = ot.orderTranAcno " +
+           "WHERE o.orderMastCust = :custId AND " +
+           "(:orderDate IS NULL OR o.orderMastDate = :orderDate) AND " +
+           "(:startDate IS NULL OR o.orderMastDate >= :startDate) AND " +
+           "(:endDate IS NULL OR o.orderMastDate <= :endDate) AND " +
+           "(:orderNumber IS NULL OR CONCAT(o.orderMastDate, '-', o.orderMastAcno) LIKE %:orderNumber%) AND " +
+           "(:sdiv IS NULL OR o.orderMastSdiv = :sdiv) AND " +
+           "(:comName IS NULL OR o.orderMastComname LIKE %:comName%) " +
+           "GROUP BY o.orderMastDate, o.orderMastSosok, o.orderMastUjcd, o.orderMastAcno " +
+           "ORDER BY o.orderMastDate DESC, o.orderMastAcno DESC")
+    Page<Object[]> findOrderSummaryByCustomerWithFilters(
+            @Param("custId") Integer custId,
+            @Param("orderDate") String orderDate,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate,
+            @Param("orderNumber") String orderNumber,
+            @Param("sdiv") String sdiv,
+            @Param("comName") String comName,
+            Pageable pageable);
 } 
