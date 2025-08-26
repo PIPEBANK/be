@@ -226,9 +226,9 @@ public interface OrderMastRepository extends JpaRepository<OrderMast, OrderMast.
      * 
      * 결과 Object[] 구조:
      * [0]: OrderMast 엔티티
-     * [1]: orderTranTotalAmount (BigDecimal) - 주문 총 금액
+     * [1]: orderTranTotalAmount (BigDecimal) - 주문 총 공급가 (orderTranNet 합계)
      */
-    @Query("SELECT o, COALESCE(SUM(ot.orderTranTot), 0) as totalAmount " +
+    @Query("SELECT o, COALESCE(SUM(ot.orderTranNet), 0) as totalAmount " +
            "FROM OrderMast o " +
            "LEFT JOIN OrderTran ot ON " +
            "   o.orderMastDate = ot.orderTranDate AND " +

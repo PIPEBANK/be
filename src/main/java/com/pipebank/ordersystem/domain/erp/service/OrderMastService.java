@@ -486,9 +486,9 @@ public class OrderMastService {
                     })
                     .collect(Collectors.toList());
             
-            // 총 금액 계산 (orderTranTot 합계)
+            // 총 금액 계산 (orderTranNet 합계) - 공급가 기준
             BigDecimal totalAmount = orderTranResponses.stream()
-                    .map(OrderTranDetailResponse::getOrderTranTot)
+                    .map(OrderTranDetailResponse::getOrderTranNet)
                     .filter(amount -> amount != null)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
