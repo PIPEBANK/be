@@ -486,10 +486,40 @@ public class OrderMastService {
                     })
                     .collect(Collectors.toList());
             
-            // 총 금액 계산 (orderTranNet 합계) - 공급가 기준
-            BigDecimal totalAmount = orderTranResponses.stream()
+            // 합계 계산
+            BigDecimal totalAmount = orderTranResponses.stream() // 기존 필드 유지: 공급가 합계
                     .map(OrderTranDetailResponse::getOrderTranNet)
                     .filter(amount -> amount != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal orderTranCntTotal = orderTranResponses.stream()
+                    .map(OrderTranDetailResponse::getOrderTranCnt)
+                    .filter(v -> v != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal shipQuantityTotal = orderTranResponses.stream()
+                    .map(OrderTranDetailResponse::getShipQuantity)
+                    .filter(v -> v != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal orderTranAmtTotal = orderTranResponses.stream()
+                    .map(OrderTranDetailResponse::getOrderTranAmt)
+                    .filter(v -> v != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal orderTranNetTotal = orderTranResponses.stream()
+                    .map(OrderTranDetailResponse::getOrderTranNet)
+                    .filter(v -> v != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal orderTranVatTotal = orderTranResponses.stream()
+                    .map(OrderTranDetailResponse::getOrderTranVat)
+                    .filter(v -> v != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal orderTranTotTotal = orderTranResponses.stream()
+                    .map(OrderTranDetailResponse::getOrderTranTot)
+                    .filter(v -> v != null)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             // 🔥 미출고금액 총액 계산 (각 Tran의 pendingAmount 합계)
@@ -519,6 +549,12 @@ public class OrderMastService {
                     .orderTranList(orderTranResponses)
                     .orderTranTotalAmount(totalAmount)
                     .pendingTotalAmount(pendingTotalAmount)  // 🔥 미출고금액 총액
+                    .orderTranCntTotal(orderTranCntTotal)
+                    .shipQuantityTotal(shipQuantityTotal)
+                    .orderTranAmtTotal(orderTranAmtTotal)
+                    .orderTranNetTotal(orderTranNetTotal)
+                    .orderTranVatTotal(orderTranVatTotal)
+                    .orderTranTotTotal(orderTranTotTotal)
                     .build();
         }
         

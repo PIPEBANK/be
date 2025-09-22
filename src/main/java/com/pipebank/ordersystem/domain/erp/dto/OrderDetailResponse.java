@@ -1,11 +1,12 @@
 package com.pipebank.ordersystem.domain.erp.dto;
 
-import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
-import lombok.Builder;
-import lombok.Getter;
-
 import java.math.BigDecimal;
 import java.util.List;
+
+import com.pipebank.ordersystem.domain.erp.entity.OrderMast;
+
+import lombok.Builder;
+import lombok.Getter;
 
 /**
  * 주문 상세조회 응답 DTO
@@ -40,6 +41,14 @@ public class OrderDetailResponse {
     
     // ===== 🔥 미출고 정보 =====
     private BigDecimal pendingTotalAmount;                 // 미출고금액 총액 (각 Tran의 pendingAmount 합계)
+
+    // ===== 🧮 합계 정보(요청 추가) =====
+    private BigDecimal orderTranCntTotal;                  // 주문수량 합계 (orderTranCnt 합)
+    private BigDecimal shipQuantityTotal;                  // 출하수량 합계 (shipQuantity 합)
+    private BigDecimal orderTranAmtTotal;                  // 단가 합계 (orderTranAmt 합)
+    private BigDecimal orderTranNetTotal;                  // 공급가 합계 (orderTranNet 합)
+    private BigDecimal orderTranVatTotal;                  // 부가세 합계 (orderTranVat 합)
+    private BigDecimal orderTranTotTotal;                  // 주문금액 합계 (orderTranTot 합)
 
     /**
      * OrderMast 엔티티에서 기본 정보 변환

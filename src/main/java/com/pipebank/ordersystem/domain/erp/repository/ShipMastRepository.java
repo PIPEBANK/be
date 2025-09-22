@@ -457,7 +457,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND (:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%)
         AND (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%)
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
-        AND (:excludeCompleted = false OR ot.orderTranStau != '4010030001')
+        AND (:excludeCompleted = false OR ot.orderTranStau NOT IN ('4010030001','4010030002'))
         AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
         GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
@@ -517,7 +517,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND (:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%)
         AND (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%)
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
-        AND (:excludeCompleted = false OR ot.orderTranStau != '4010030001')
+        AND (:excludeCompleted = false OR ot.orderTranStau NOT IN ('4010030001','4010030002'))
         AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
         GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
@@ -577,7 +577,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND ((:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%) 
              OR (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%))
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
-        AND (:excludeCompleted = false OR ot.orderTranStau != '4010030001')
+        AND (:excludeCompleted = false OR ot.orderTranStau NOT IN ('4010030001','4010030002'))
         AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
         GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
@@ -637,7 +637,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND ((:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%) 
              OR (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%))
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
-        AND (:excludeCompleted = false OR ot.orderTranStau != '4010030001')
+        AND (:excludeCompleted = false OR ot.orderTranStau NOT IN ('4010030001','4010030002'))
         AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
         GROUP BY om.orderMastDate, om.orderMastAcno, ot.orderTranSeq,
                  om.orderMastOdate, ot.orderTranStau, ic.itemCodeNum, 
