@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pipebank.ordersystem.domain.erp.dto.OrderShipmentDetailResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipMastListResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipSlipListResponse;
-import com.pipebank.ordersystem.domain.erp.dto.ShipSlipResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipSlipSummaryResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipmentDetailResponse;
 import com.pipebank.ordersystem.domain.erp.dto.ShipmentItemResponse;
@@ -237,6 +236,7 @@ public class ShipMastController {
      * - itemName2: 품명2 (부분 검색) 🆕
      * - spec1: 규격1 (부분 검색) 🆕
      * - spec2: 규격2 (부분 검색) 🆕
+     * - itemNumber: 품번 (부분 검색) 🆕
      * - itemNameOperator: 품명 검색 연산자 (AND/OR, 기본값: AND) 🆕
      * - specOperator: 규격 검색 연산자 (AND/OR, 기본값: AND) 🆕
      * - siteName: 현장명 (부분 검색) 🆕
@@ -272,6 +272,7 @@ public class ShipMastController {
             @RequestParam(required = false) String itemName2,
             @RequestParam(required = false) String spec1,
             @RequestParam(required = false) String spec2,
+            @RequestParam(required = false) String itemNumber,
             @RequestParam(defaultValue = "AND") String itemNameOperator,  // AND 또는 OR
             @RequestParam(defaultValue = "AND") String specOperator,      // AND 또는 OR
             @RequestParam(required = false) String siteName,
@@ -279,12 +280,11 @@ public class ShipMastController {
             @RequestParam(required = false) String statusFilter,             // 특정 상태
             @PageableDefault(size = 20, sort = {"orderMastDate", "orderMastAcno"}, direction = Sort.Direction.DESC) Pageable pageable) {
         
-        log.info("주문-출하 통합 상세 조회 API 호출 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, siteName={}, excludeCompleted={}, statusFilter={}", 
-                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, excludeCompleted, statusFilter);
+        // 로그 생략 (파라미터 다수)
         
         Page<OrderShipmentDetailResponse> response = shipMastService.getOrderShipmentDetailByCustomer(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, 
+                itemName1, itemName2, spec1, spec2, itemNumber, itemNameOperator, specOperator, siteName, 
                 excludeCompleted, statusFilter, pageable);
         return ResponseEntity.ok(response);
     }

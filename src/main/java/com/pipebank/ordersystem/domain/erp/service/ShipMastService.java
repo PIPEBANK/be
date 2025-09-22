@@ -547,17 +547,17 @@ public class ShipMastService {
      */
     public Page<OrderShipmentDetailResponse> getOrderShipmentDetailByCustomer(
             Integer custId, String shipDate, String startDate, String endDate, String orderNumber,
-            String itemName1, String itemName2, String spec1, String spec2,
+            String itemName1, String itemName2, String spec1, String spec2, String itemNumber,
             String itemNameOperator, String specOperator, String siteName,
             boolean excludeCompleted, String statusFilter, Pageable pageable) {
         
-        log.info("주문-출하 통합 상세 조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNameOp={}, specOp={}, siteName={}, excludeCompleted={}, statusFilter={}", 
-                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName, excludeCompleted, statusFilter);
+        log.info("주문-출하 통합 상세 조회 - 거래처ID: {}, 필터: shipDate={}, startDate={}, endDate={}, orderNumber={}, itemName1={}, itemName2={}, spec1={}, spec2={}, itemNumber={}, itemNameOp={}, specOp={}, siteName={}, excludeCompleted={}, statusFilter={}", 
+                custId, shipDate, startDate, endDate, orderNumber, itemName1, itemName2, spec1, spec2, itemNumber, itemNameOperator, specOperator, siteName, excludeCompleted, statusFilter);
         
         // Repository에서 복잡한 JOIN 쿼리 실행
         Page<Object[]> rawData = shipMastRepository.findOrderShipmentDetailByCustomer(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, itemNameOperator, specOperator, siteName,
+                itemName1, itemName2, spec1, spec2, itemNumber, itemNameOperator, specOperator, siteName,
                 excludeCompleted, statusFilter, pageable);
         
         // Object[] 배열을 OrderShipmentDetailResponse로 변환

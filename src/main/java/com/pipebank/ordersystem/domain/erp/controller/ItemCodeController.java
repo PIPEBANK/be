@@ -101,6 +101,7 @@ public class ItemCodeController {
             // 하위호환성을 위한 기존 파라미터명 지원
             @RequestParam(required = false) String itemName,
             @RequestParam(required = false) String spec,
+            @RequestParam(required = false) String itemNum,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "itemCodeCode") String sortBy,
@@ -112,7 +113,7 @@ public class ItemCodeController {
         
         Page<ItemSearchResponse> items = itemCodeService.searchItemsByNameAndSpec(
             finalItemName1, itemName2, finalSpec1, spec2, itemNameOperator, specOperator,
-            page, size, sortBy, sortDir);
+            itemNum, page, size, sortBy, sortDir);
         return ResponseEntity.ok(items);
     }
 } 

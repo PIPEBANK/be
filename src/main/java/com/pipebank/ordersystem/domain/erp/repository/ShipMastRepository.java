@@ -378,7 +378,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
      */
     default Page<Object[]> findOrderShipmentDetailByCustomer(
             Integer custId, String shipDate, String startDate, String endDate, String orderNumber,
-            String itemName1, String itemName2, String spec1, String spec2,
+            String itemName1, String itemName2, String spec1, String spec2, String itemNumber,
             String itemNameOperator, String specOperator, String siteName,
             boolean excludeCompleted, String statusFilter, Pageable pageable) {
         
@@ -390,22 +390,22 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
             // AND, AND
             return findOrderShipmentDetailByCustomerAndAnd(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, siteName, excludeCompleted, statusFilter, pageable);
+                itemName1, itemName2, spec1, spec2, itemNumber, siteName, excludeCompleted, statusFilter, pageable);
         } else if (!itemNameAnd && specAnd) {
             // OR, AND
             return findOrderShipmentDetailByCustomerOrAnd(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, siteName, excludeCompleted, statusFilter, pageable);
+                itemName1, itemName2, spec1, spec2, itemNumber, siteName, excludeCompleted, statusFilter, pageable);
         } else if (itemNameAnd && !specAnd) {
             // AND, OR
             return findOrderShipmentDetailByCustomerAndOr(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, siteName, excludeCompleted, statusFilter, pageable);
+                itemName1, itemName2, spec1, spec2, itemNumber, siteName, excludeCompleted, statusFilter, pageable);
         } else {
             // OR, OR
             return findOrderShipmentDetailByCustomerOrOr(
                 custId, shipDate, startDate, endDate, orderNumber,
-                itemName1, itemName2, spec1, spec2, siteName, excludeCompleted, statusFilter, pageable);
+                itemName1, itemName2, spec1, spec2, itemNumber, siteName, excludeCompleted, statusFilter, pageable);
         }
     }
 
@@ -456,6 +456,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND (:itemName2 IS NULL OR ot.orderTranDeta LIKE %:itemName2%)
         AND (:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%)
         AND (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%)
+        AND (:itemNumber IS NULL OR ic.itemCodeNum LIKE %:itemNumber%)
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
         AND (:excludeCompleted = false OR ot.orderTranStau NOT IN ('4010030001','4010030002'))
         AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
@@ -476,6 +477,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("itemName2") String itemName2,
         @Param("spec1") String spec1,
         @Param("spec2") String spec2,
+        @Param("itemNumber") String itemNumber,
         @Param("siteName") String siteName,
         @Param("excludeCompleted") boolean excludeCompleted,
         @Param("statusFilter") String statusFilter,
@@ -516,6 +518,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
              OR (:itemName2 IS NULL OR ot.orderTranDeta LIKE %:itemName2%))
         AND (:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%)
         AND (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%)
+        AND (:itemNumber IS NULL OR ic.itemCodeNum LIKE %:itemNumber%)
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
         AND (:excludeCompleted = false OR ot.orderTranStau NOT IN ('4010030001','4010030002'))
         AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
@@ -536,6 +539,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("itemName2") String itemName2,
         @Param("spec1") String spec1,
         @Param("spec2") String spec2,
+        @Param("itemNumber") String itemNumber,
         @Param("siteName") String siteName,
         @Param("excludeCompleted") boolean excludeCompleted,
         @Param("statusFilter") String statusFilter,
@@ -576,6 +580,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         AND (:itemName2 IS NULL OR ot.orderTranDeta LIKE %:itemName2%)
         AND ((:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%) 
              OR (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%))
+        AND (:itemNumber IS NULL OR ic.itemCodeNum LIKE %:itemNumber%)
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
         AND (:excludeCompleted = false OR ot.orderTranStau NOT IN ('4010030001','4010030002'))
         AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
@@ -596,6 +601,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("itemName2") String itemName2,
         @Param("spec1") String spec1,
         @Param("spec2") String spec2,
+        @Param("itemNumber") String itemNumber,
         @Param("siteName") String siteName,
         @Param("excludeCompleted") boolean excludeCompleted,
         @Param("statusFilter") String statusFilter,
@@ -636,6 +642,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
              OR (:itemName2 IS NULL OR ot.orderTranDeta LIKE %:itemName2%))
         AND ((:spec1 IS NULL OR ot.orderTranSpec LIKE %:spec1%) 
              OR (:spec2 IS NULL OR ot.orderTranSpec LIKE %:spec2%))
+        AND (:itemNumber IS NULL OR ic.itemCodeNum LIKE %:itemNumber%)
         AND (:siteName IS NULL OR om.orderMastComname LIKE %:siteName%)
         AND (:excludeCompleted = false OR ot.orderTranStau NOT IN ('4010030001','4010030002'))
         AND (:statusFilter IS NULL OR ot.orderTranStau = :statusFilter)
@@ -656,6 +663,7 @@ public interface ShipMastRepository extends JpaRepository<ShipMast, ShipMast.Shi
         @Param("itemName2") String itemName2,
         @Param("spec1") String spec1,
         @Param("spec2") String spec2,
+        @Param("itemNumber") String itemNumber,
         @Param("siteName") String siteName,
         @Param("excludeCompleted") boolean excludeCompleted,
         @Param("statusFilter") String statusFilter,

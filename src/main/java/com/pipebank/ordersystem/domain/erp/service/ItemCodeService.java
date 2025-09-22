@@ -131,6 +131,7 @@ public class ItemCodeService {
     public Page<ItemSearchResponse> searchItemsByNameAndSpec(String itemName1, String itemName2, 
                                                            String spec1, String spec2,
                                                            String itemNameOperator, String specOperator,
+                                                           String itemNum,
                                                            int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
@@ -143,16 +144,16 @@ public class ItemCodeService {
         
         if (!itemNameIsOr && !specIsOr) {
             // AND, AND
-            itemPage = itemCodeRepository.searchByNameAndSpecWithAndAnd(itemName1, itemName2, spec1, spec2, pageable);
+            itemPage = itemCodeRepository.searchByNameAndSpecWithAndAnd(itemName1, itemName2, spec1, spec2, itemNum, pageable);
         } else if (itemNameIsOr && !specIsOr) {
             // OR, AND
-            itemPage = itemCodeRepository.searchByNameAndSpecWithOrAnd(itemName1, itemName2, spec1, spec2, pageable);
+            itemPage = itemCodeRepository.searchByNameAndSpecWithOrAnd(itemName1, itemName2, spec1, spec2, itemNum, pageable);
         } else if (!itemNameIsOr && specIsOr) {
             // AND, OR
-            itemPage = itemCodeRepository.searchByNameAndSpecWithAndOr(itemName1, itemName2, spec1, spec2, pageable);
+            itemPage = itemCodeRepository.searchByNameAndSpecWithAndOr(itemName1, itemName2, spec1, spec2, itemNum, pageable);
         } else {
             // OR, OR
-            itemPage = itemCodeRepository.searchByNameAndSpecWithOrOr(itemName1, itemName2, spec1, spec2, pageable);
+            itemPage = itemCodeRepository.searchByNameAndSpecWithOrOr(itemName1, itemName2, spec1, spec2, itemNum, pageable);
         }
         
         return itemPage.map(this::convertToItemSearchResponse);
