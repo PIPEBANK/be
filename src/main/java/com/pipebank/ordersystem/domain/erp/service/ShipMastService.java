@@ -501,6 +501,8 @@ public class ShipMastService {
                 .shipTranDate(shipTran.getShipTranDate())
                 .shipTranCnt(shipTran.getShipTranCnt())
                 .shipTranTot(shipTran.getShipTranTot())
+                .shipTranAmt(shipTran.getShipTranAmt())
+                .shipTranNet(shipTran.getShipTranNet())
                 // 🔥 새로 추가된 운송 관련 정보
                 .shipMastCarno(shipMast.getShipMastCarno())
                 .shipMastTname(shipMast.getShipMastTname())

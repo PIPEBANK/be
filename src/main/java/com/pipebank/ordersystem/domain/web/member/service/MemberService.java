@@ -252,6 +252,18 @@ public class MemberService {
     }
 
     /**
+     * 회원 활성화
+     */
+    @Transactional
+    public void activateMember(Long memberId, String updateBy) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다: " + memberId));
+
+        member.updateUseYn(true, updateBy);
+        log.info("회원 활성화 완료 - ID: {}", member.getMemberId());
+    }
+
+    /**
      * 회원 완전 삭제
      */
     @Transactional

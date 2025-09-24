@@ -202,6 +202,20 @@ public class MemberController {
     }
 
     /**
+     * 회원 활성화 (관리자만)
+     */
+    @PutMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> activateMember(@PathVariable Long id,
+                                                             @AuthenticationPrincipal UserDetails userDetails) {
+        memberService.activateMember(id, userDetails.getUsername());
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "회원이 성공적으로 활성화되었습니다");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 회원 완전 삭제 (관리자만)
      */
     @DeleteMapping("/{id}")

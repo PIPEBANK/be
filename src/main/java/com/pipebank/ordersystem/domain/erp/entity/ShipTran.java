@@ -73,7 +73,7 @@ public class ShipTran {
     private Integer shipTranAdiv; // 계산구분
 
     @Column(name = "SHIP_TRAN_RATE", precision = 18, scale = 0, nullable = false)
-    private BigDecimal shipTranRate; // 단가
+    private BigDecimal shipTranRate; // 기본단가
 
     @Column(name = "SHIP_TRAN_DC_PER", precision = 18, scale = 0, nullable = false)
     private BigDecimal shipTranDcPer; // 할인율
@@ -82,7 +82,7 @@ public class ShipTran {
     private BigDecimal shipTranDcAmt; // 할인금액
 
     @Column(name = "SHIP_TRAN_AMT", precision = 18, scale = 0, nullable = false)
-    private BigDecimal shipTranAmt; // 금액
+    private BigDecimal shipTranAmt; // 판매단가
 
     @Column(name = "SHIP_TRAN_CNT", precision = 18, scale = 2, nullable = false)
     private BigDecimal shipTranCnt; // 수량
