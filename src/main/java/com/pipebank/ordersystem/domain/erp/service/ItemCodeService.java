@@ -209,6 +209,7 @@ public class ItemCodeService {
             item.getItemCodeNum(),
             item.getItemCodeHnam(),
             item.getItemCodeSpec(),
+            item.getItemCodeSpec2(),
             item.getItemCodeUnit(),
             item.getItemCodeSrate(),
             item.getItemCodeBrand(),
