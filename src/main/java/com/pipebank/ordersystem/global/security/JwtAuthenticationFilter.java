@@ -36,14 +36,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             
             if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
-                
+                Integer tokenVersion = jwtTokenProvider.getTokenVersionFromToken(jwt);
+
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                // tokenVersion은 권한과는 별개이므로, 필요시 UserDetails 구현 확장으로 현재 버전을 조회해 비교하는 방식 권장
                 UsernamePasswordAuthenticationToken authentication = 
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                
+
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("사용자 인증 성공: {}", username);
+                log.debug("사용자 인증 성공: {} tv:{}", username, tokenVersion);
             }
         } catch (Exception ex) {
             log.error("사용자 인증 실패", ex);

@@ -15,6 +15,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -51,6 +52,9 @@ public class Member {
     @Enumerated(EnumType.STRING)
     @Column(name = "ROLE", nullable = false)
     private MemberRole role = MemberRole.USER;
+
+    @Column(name = "TOKEN_VERSION", nullable = false)
+    private Integer tokenVersion = 0;
 
     @CreatedDate
     @Column(name = "CREATE_DATE", nullable = false, updatable = false)
@@ -108,5 +112,11 @@ public class Member {
 
     public boolean isAdmin() {
         return MemberRole.ADMIN.equals(this.role);
+    }
+
+    // 토큰 버전 증가(강제 로그아웃 등)
+    public void bumpTokenVersion(String updateBy) {
+        this.tokenVersion = (this.tokenVersion == null ? 0 : this.tokenVersion) + 1;
+        this.updateBy = updateBy;
     }
 } 

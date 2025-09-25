@@ -56,6 +56,17 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String createAccessToken(String username, String role, Integer tokenVersion) {
+        return Jwts.builder()
+                .subject(username)
+                .claim("role", role)
+                .claim("tv", tokenVersion == null ? 0 : tokenVersion)
+                .issuedAt(new Date())
+                .expiration(Date.from(Instant.now().plus(jwtProperties.getExpiration(), ChronoUnit.MILLIS)))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
     // Refresh Token 생성
     public String generateRefreshToken(String username) {
         return Jwts.builder()
@@ -80,6 +91,19 @@ public class JwtTokenProvider {
                 .getPayload();
         
         return claims.getSubject();
+    }
+
+    public Integer getTokenVersionFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        Object value = claims.get("tv");
+        if (value == null) return 0;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof Number) return ((Number) value).intValue();
+        try { return Integer.parseInt(value.toString()); } catch (Exception e) { return 0; }
     }
 
     // 토큰에서 회원 ID 추출 (alias)
