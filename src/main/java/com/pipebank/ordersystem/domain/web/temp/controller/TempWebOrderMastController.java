@@ -219,6 +219,21 @@ public class TempWebOrderMastController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // 정확한 키로 삭제 (권장) - Mast + Tran 함께 삭제
+    @DeleteMapping("/{orderMastDate}/{orderMastSosok}/{orderMastUjcd}/{orderMastAcno}/temp-id/{tempOrderId}")
+    public ResponseEntity<Void> deleteByExactKey(
+            @PathVariable String orderMastDate,
+            @PathVariable Integer orderMastSosok,
+            @PathVariable String orderMastUjcd,
+            @PathVariable Integer orderMastAcno,
+            @PathVariable Integer tempOrderId) {
+        TempWebOrderMast.TempWebOrderMastId id = new TempWebOrderMast.TempWebOrderMastId(
+                orderMastDate, orderMastSosok, orderMastUjcd, orderMastAcno, tempOrderId
+        );
+        boolean deleted = tempWebOrderMastService.delete(id);
+        return deleted ? ResponseEntity.noContent().<Void>build() : ResponseEntity.notFound().<Void>build();
+    }
+
     // send 상태를 true로 변경하여 WebOrderMast로 변환 (🔥 Deprecated - by-order-number API 사용 권장)
     @PatchMapping("/{orderMastDate}/{orderMastSosok}/{orderMastUjcd}/{orderMastAcno}/send")
     public ResponseEntity<?> markAsSent(

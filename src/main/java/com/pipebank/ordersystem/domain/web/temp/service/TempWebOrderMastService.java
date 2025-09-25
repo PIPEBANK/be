@@ -858,11 +858,32 @@ public class TempWebOrderMastService {
     // 삭제
     @Transactional
     public boolean delete(TempWebOrderMast.TempWebOrderMastId id) {
-        if (tempWebOrderMastRepository.existsById(id)) {
-            tempWebOrderMastRepository.deleteById(id);
-            return true;
-        }
-        return false;
+        return tempWebOrderMastRepository.findById(id)
+                .map(entity -> {
+                    // 관련 TempWebOrderTran 먼저 삭제
+                    List<TempWebOrderTran> existingOrderTrans = tempWebOrderTranRepository
+                            .findByOrderTranDateAndOrderTranSosokAndOrderTranUjcdAndOrderTranAcnoAndTempOrderId(
+                                    entity.getOrderMastDate(),
+                                    entity.getOrderMastSosok(),
+                                    entity.getOrderMastUjcd(),
+                                    entity.getOrderMastAcno(),
+                                    entity.getTempOrderId()
+                            );
+
+                    int transCount = existingOrderTrans != null ? existingOrderTrans.size() : 0;
+                    if (transCount > 0) {
+                        tempWebOrderTranRepository.deleteAll(existingOrderTrans);
+                        log.info("TempWebOrderTran 삭제 완료: {}개 ({}-{}-{}-{}:{})",
+                                transCount,
+                                entity.getOrderMastDate(), entity.getOrderMastSosok(), entity.getOrderMastUjcd(), entity.getOrderMastAcno(), entity.getTempOrderId());
+                    }
+
+                    // Mast 삭제
+                    tempWebOrderMastRepository.delete(entity);
+                    log.info("TempWebOrderMast 삭제 완료: {}", entity.getOrderKey());
+                    return true;
+                })
+                .orElse(false);
     }
 
     // TempWebOrderMast를 WebOrderMast로 변환하여 저장
