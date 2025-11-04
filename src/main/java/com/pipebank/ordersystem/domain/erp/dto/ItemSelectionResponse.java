@@ -23,6 +23,7 @@ public class ItemSelectionResponse {
     private boolean isActive;       // 사용여부
     private boolean isOrderable;    // 주문가능여부
     private BigDecimal stockQuantity; // 재고수량 (부서7 기준)
+    private BigDecimal availableStock; // 가용재고 (현재재고 + 예상입출고)
     
     // 분류 정보
     private String div1;            // 제품종류 코드
@@ -39,7 +40,7 @@ public class ItemSelectionResponse {
                                           String brand, boolean isActive, boolean isOrderable,
                                           String div1, String div2, String div3, String div4,
                                           String div1Name, String div2Name, String div3Name, String div4Name,
-                                          BigDecimal stockQuantity) {
+                                          BigDecimal stockQuantity, BigDecimal availableStock) {
         return ItemSelectionResponse.builder()
                 .itemCode(itemCode)
                 .itemNum(itemNum)
@@ -60,6 +61,7 @@ public class ItemSelectionResponse {
                 .div3Name(div3Name)
                 .div4Name(div4Name)
                 .stockQuantity(stockQuantity)
+                .availableStock(availableStock)
                 .build();
     }
 } 

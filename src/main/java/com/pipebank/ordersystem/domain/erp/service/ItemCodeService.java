@@ -173,6 +173,16 @@ public class ItemCodeService {
         BigDecimal stockQuantity = stockDateRepository.findStockQuantityByItemCodeAndBuse7(item.getItemCodeCode())
                 .orElse(BigDecimal.ZERO);
         
+        // 가용재고 조회 (기존 ERP ExpectJegoSearch 로직)
+        // sosok = 2 (기본값)
+        BigDecimal availableStock = stockDateRepository.findAvailableStockQuantity(2, item.getItemCodeCode());
+        if (availableStock == null) {
+            availableStock = BigDecimal.ZERO;
+        }
+        
+        // 최종 가용재고 = 현재재고 + 예상입출고
+        BigDecimal finalAvailableStock = stockQuantity.add(availableStock);
+        
         return ItemSelectionResponse.of(
             item.getItemCodeCode(),
             item.getItemCodeNum(),
@@ -192,7 +202,8 @@ public class ItemCodeService {
             div2Name,
             div3Name,
             div4Name,
-            stockQuantity
+            stockQuantity,
+            finalAvailableStock
         );
     }
     
@@ -203,6 +214,16 @@ public class ItemCodeService {
         // 재고수량 조회 (부서7 기준)
         BigDecimal stockQuantity = stockDateRepository.findStockQuantityByItemCodeAndBuse7(item.getItemCodeCode())
                 .orElse(BigDecimal.ZERO);
+        
+        // 가용재고 조회 (기존 ERP ExpectJegoSearch 로직)
+        // sosok = 2 (기본값, 필요시 파라미터로 받을 수 있음)
+        BigDecimal availableStock = stockDateRepository.findAvailableStockQuantity(2, item.getItemCodeCode());
+        if (availableStock == null) {
+            availableStock = BigDecimal.ZERO;
+        }
+        
+        // 최종 가용재고 = 현재재고 + 예상입출고
+        BigDecimal finalAvailableStock = stockQuantity.add(availableStock);
                 
         return ItemSearchResponse.of(
             item.getItemCodeCode(),
@@ -213,7 +234,8 @@ public class ItemCodeService {
             item.getItemCodeUnit(),
             item.getItemCodeSrate(),
             item.getItemCodeBrand(),
-            stockQuantity
+            stockQuantity,
+            finalAvailableStock
         );
     }
     

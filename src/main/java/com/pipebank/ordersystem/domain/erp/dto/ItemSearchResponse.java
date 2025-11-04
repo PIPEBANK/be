@@ -20,11 +20,12 @@ public class ItemSearchResponse {
     private String unit;            // 단위
     private BigDecimal saleRate;    // 판매단가
     private String brand;           // 브랜드
-    private BigDecimal stockQuantity; // 재고수량
+    private BigDecimal stockQuantity; // 재고수량 (부서7 기준)
+    private BigDecimal availableStock; // 가용재고 (현재재고 + 예상입출고)
     
     public static ItemSearchResponse of(Integer itemCode, String itemNum, String itemName,
                                        String spec, BigDecimal itemCodeSpec2, String unit, BigDecimal saleRate, String brand,
-                                       BigDecimal stockQuantity) {
+                                       BigDecimal stockQuantity, BigDecimal availableStock) {
         return ItemSearchResponse.builder()
                 .itemCode(itemCode)
                 .itemNum(itemNum)
@@ -35,6 +36,7 @@ public class ItemSearchResponse {
                 .saleRate(saleRate)
                 .brand(brand)
                 .stockQuantity(stockQuantity)
+                .availableStock(availableStock)
                 .build();
     }
 } 

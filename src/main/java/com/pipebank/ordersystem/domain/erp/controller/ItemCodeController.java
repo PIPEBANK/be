@@ -70,6 +70,7 @@ public class ItemCodeController {
     
     /**
      * 5단계: 최종 품목(ItemCode) 목록 조회 (DIV1+DIV2+DIV3+DIV4 기준) - 주문가능한 항목만
+     *  /api/erp/items/final/
      */
     @GetMapping("/final/{div1}/{div2}/{div3}/{div4}")
     public ResponseEntity<Page<ItemSelectionResponse>> getItemsByDivision(
