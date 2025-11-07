@@ -79,7 +79,7 @@ public interface StockDateRepository extends JpaRepository<StockDate, StockDate.
         "    FROM sa_proc_tran " +
         "    WHERE PROC_TRAN_SOSOK = :sosok " +
         "      AND PROC_TRAN_ITEM = :itemCode " +
-        "      AND PROC_TRAN_STAU <> '4150030001' " +
+        "      AND PROC_TRAN_STAU <> '4160030001' " +
         ") BB", 
         nativeQuery = true)
     BigDecimal findAvailableStockQuantity(@Param("sosok") Integer sosok, @Param("itemCode") Integer itemCode);
