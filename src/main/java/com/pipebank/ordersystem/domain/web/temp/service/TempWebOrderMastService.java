@@ -1,5 +1,6 @@
 package com.pipebank.ordersystem.domain.web.temp.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -258,14 +259,17 @@ public class TempWebOrderMastService {
                             .map(orderTran -> {
                                 // ERP DB에서 ItemCode 정보 조회
                                 String itemCodeNum = null;
+                                BigDecimal itemCodeSpec2 = null;
                                 if (orderTran.getOrderTranItem() != null) {
-                                    itemCodeNum = itemCodeRepository.findById(orderTran.getOrderTranItem())
-                                            .map(itemCode -> itemCode.getItemCodeNum())
-                                            .orElse(null);
+                                    var itemCodeOpt = itemCodeRepository.findById(orderTran.getOrderTranItem());
+                                    if (itemCodeOpt.isPresent()) {
+                                        itemCodeNum = itemCodeOpt.get().getItemCodeNum();
+                                        itemCodeSpec2 = itemCodeOpt.get().getItemCodeSpec2(); // 🔥 표준중량 추가
+                                    }
                                 }
                                 
                                 // ItemCode 정보와 함께 Response 생성
-                                return TempWebOrderTranResponse.fromWithItemCode(orderTran, itemCodeNum);
+                                return TempWebOrderTranResponse.fromWithItemCode(orderTran, itemCodeNum, itemCodeSpec2);
                             })
                             .collect(Collectors.toList());
                     
@@ -312,14 +316,17 @@ public class TempWebOrderMastService {
                             .map(orderTran -> {
                                 // ERP DB에서 ItemCode 정보 조회
                                 String itemCodeNum = null;
+                                BigDecimal itemCodeSpec2 = null;
                                 if (orderTran.getOrderTranItem() != null) {
-                                    itemCodeNum = itemCodeRepository.findById(orderTran.getOrderTranItem())
-                                            .map(itemCode -> itemCode.getItemCodeNum())
-                                            .orElse(null);
+                                    var itemCodeOpt = itemCodeRepository.findById(orderTran.getOrderTranItem());
+                                    if (itemCodeOpt.isPresent()) {
+                                        itemCodeNum = itemCodeOpt.get().getItemCodeNum();
+                                        itemCodeSpec2 = itemCodeOpt.get().getItemCodeSpec2(); // 🔥 표준중량 추가
+                                    }
                                 }
                                 
                                 // ItemCode 정보와 함께 Response 생성
-                                return TempWebOrderTranResponse.fromWithItemCode(orderTran, itemCodeNum);
+                                return TempWebOrderTranResponse.fromWithItemCode(orderTran, itemCodeNum, itemCodeSpec2);
                             })
                             .collect(Collectors.toList());
                     
@@ -881,7 +888,7 @@ public class TempWebOrderMastService {
                     // Mast 삭제
                     tempWebOrderMastRepository.delete(entity);
                     log.info("TempWebOrderMast 삭제 완료: {}", entity.getOrderKey());
-                    return true;
+            return true;
                 })
                 .orElse(false);
     }

@@ -60,6 +60,7 @@ public class TempWebOrderTranResponse {
     
     // ERP ItemCode 정보 추가
     private String itemCodeNum;  // 품목번호 (ERP ItemCode.itemCodeNum)
+    private BigDecimal itemCodeSpec2;  // 표준중량(m당) (ERP ItemCode.itemCodeSpec2) - 환산중량 재계산용
 
     // 비즈니스 메서드들 (Entity와 동일)
     public String getOrderTranKey() {
@@ -121,9 +122,11 @@ public class TempWebOrderTranResponse {
     }
     
     // ERP ItemCode 정보와 함께 생성하는 새로운 팩토리 메서드
-    public static TempWebOrderTranResponse fromWithItemCode(TempWebOrderTran entity, String itemCodeNum) {
+    public static TempWebOrderTranResponse fromWithItemCode(TempWebOrderTran entity, String itemCodeNum, BigDecimal itemCodeSpec2) {
         TempWebOrderTranResponse response = from(entity);
         response.itemCodeNum = itemCodeNum;
+        response.itemCodeSpec2 = itemCodeSpec2;
+        response.tempOrderId = entity.getTempOrderId(); // 🔥 tempOrderId 누락 방지
         return response;
     }
 } 
